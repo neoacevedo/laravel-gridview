@@ -32,9 +32,6 @@ class DataColumn extends Column
     /** @var string */
     public $attribute;
 
-    /** @var array|Closure */
-    public $contentOptions;
-
     /** @var string|null */
     public $label;
 
@@ -53,12 +50,11 @@ class DataColumn extends Column
      */
     public function __construct($config = [])
     {
+        parent::__construct($config);
         $this->attribute = $config['attribute'] ?? null;
         $this->label = $config['label'] ?? null;
         $this->value = $config['value'] ?? null;
-        $this->options = $config['options'] ?? [];
-        $this->visible = $config['visible'] ?? true;
-        $this->grid = $config['grid'] ?? null;
+
     }
 
     /**
@@ -79,41 +75,6 @@ class DataColumn extends Column
             return Arr::get((array) $model, $this->attribute);
         }
         return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function renderDataCell($model, $key, $index)
-    {
-        if ($this->contentOptions instanceof Closure) {
-            $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
-        } else {
-            $options = $this->contentOptions ? implode(' ', array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->contentOptions,
-                array_keys($this->contentOptions)
-            )) : "";
-        }
-
-        return new HtmlString("<td $options>" . $this->renderDataCellContent($model, $key, $index) . "</td>");
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function renderCellContent()
-    {
-        if ($this->content !== null) {
-            $html = '<td>' . $this->content . '</td>';
-            return new HtmlString($html);
-        }
-
-        $html = '<td>' . $this->value . '</td>';
-
-        return new HtmlString($html);
     }
 
     /**

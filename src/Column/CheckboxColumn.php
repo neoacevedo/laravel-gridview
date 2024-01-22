@@ -21,6 +21,7 @@ namespace neoacevedo\gridview\Column;
 
 use Closure;
 use Illuminate\Support\HtmlString;
+use neoacevedo\gridview\Support\Html;
 
 /**
  * CheckboxColumn muestra una columna de casillas de verificación en un GridView
@@ -55,16 +56,17 @@ class CheckboxColumn extends Column
      */
     public function __construct($config = [])
     {
+        parent::__construct($config);
         $this->attribute = $config['attribute'] ?? null;
         $this->format = $config['format'] ?? null;
         $this->label = $config['label'] ?? null;
         $this->value = $config['value'] ?? null;
-        $this->options = $config['options'] ?? [];
+
         $this->checkboxOptions = $config['checkboxOptions'] ?? [];
-        $this->visible = $config['visible'] ?? true;
-        $this->grid = $config['grid'] ?? null;
+
         $this->cssClass = $config['cssClass'] ?? null;
         $this->name = $config['name'] ?? "selection[]";
+
     }
 
     /**
@@ -108,13 +110,7 @@ class CheckboxColumn extends Column
 
         $options['name'] = $this->name;
 
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $options,
-            array_keys($options)
-        ));
+        $options = Html::renderTagAttributes($options);
 
         return new HtmlString('<input type="checkbox" ' . $options . ' />');
     }

@@ -26,7 +26,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use neoacevedo\gridview\Column\DataColumn;
-use Illuminate\Support\Str;
+use neoacevedo\gridview\Support\Html;
 
 /**
  * The GridView object is used to display data in a grid.
@@ -54,7 +54,7 @@ class GridView
 
     /**
      * @var array the HTML attributes for the caption element.
-     * @see \yii\helpers\Html::renderTagAttributes() for details on how attributes are being rendered.
+     * @see \neoacevedo\gridview\Support\Html::renderTagAttributes() for details on how attributes are being rendered.
      * @see caption
      */
     public $captionOptions = [];
@@ -65,14 +65,14 @@ class GridView
      *
      * ```php
      * [
-     *     ['class' => SerialColumn::class],
-     *     [
-     *         'class' => DataColumn::class, // this line is optional
-     *         'attribute' => 'name',
-     *         'format' => 'text',
-     *         'label' => 'Name',
-     *     ],
-     *     ['class' => CheckboxColumn::class],
+     * ['class' => SerialColumn::class],
+     * [
+     * 'class' => DataColumn::class, // this line is optional
+     * 'attribute' => 'name',
+     * 'format' => 'text',
+     * 'label' => 'Name',
+     * ],
+     * ['class' => CheckboxColumn::class],
      * ]
      * ```
      *
@@ -88,9 +88,9 @@ class GridView
      *
      * ```php
      * [
-     *     'id',
-     *     'amount:Total Amount',
-     *     'created_at:Created at',
+     * 'id',
+     * 'amount:Total Amount',
+     * 'created_at:Created at',
      * ]
      * ```
      *
@@ -102,8 +102,8 @@ class GridView
      * 'author.name',
      * // full syntax
      * [
-     *     'attribute' => 'author.name',
-     *     // ...
+     * 'attribute' => 'author.name',
+     * // ...
      * ]
      * ```
      */
@@ -180,16 +180,17 @@ class GridView
         $this->columns = $config['columns'];
 
         if (isset($config['tableOptions'])) {
-            $this->tableOptions = $config['tableOptions'];
+            $tableOptions = implode(
+                ' ',
+                array_map(
+                    function ($v, $k) {
+                        return sprintf("%s=\"%s\"", $k, $v);
+                    },
+                    $config['tableOptions'],
+                    array_keys($config['tableOptions'])
+                )
+            );
         }
-
-        $tableOptions = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->tableOptions,
-            array_keys($this->tableOptions)
-        ));
 
         $this->initColumns();
 
@@ -229,13 +230,16 @@ class GridView
         if ($this->emptyText === false) {
             return '';
         }
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->emptyTextOptions,
-            array_keys($this->emptyTextOptions)
-        ));
+        $options = implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $this->emptyTextOptions,
+                array_keys($this->emptyTextOptions)
+            )
+        );
 
         $tag = Arr::forget($this->emptyTextOptions, 'tag');
         if (!$tag) {
@@ -251,20 +255,31 @@ class GridView
      */
     public function renderColumnGroup()
     {
+        /** @var \neoacevedo\gridview\Column\Column $column */
         foreach ($this->columns as $column) {
-            /* @var $column Column */
             if (!empty($column->options)) {
+                $options = " ";
                 $cols = [];
+                /** @var \neoacevedo\gridview\Column\Column $col */
                 foreach ($this->columns as $col) {
-                    $options = implode(' ', array_map(
-                        function ($v, $k) {
-                            return sprintf("%s=\"%s\"", $k, $v);
-                        },
-                        $col->options,
-                        array_keys($col->options)
-                    ));
-                    $cols[] = "<col $options></col>";
+                    // $options = implode(
+// ' ',
+// array_map(
+// function ($v, $k) {
+// return sprintf("%s=\"%s\"", $k, $v);
+// },
+// $col->options,
+// array_keys($col->options)
+// )
+// );
+                    foreach ($options as $option => $value) {
+                        $options .= rtrim(" $option=\"$value\"");
+                    }
+                    $cols[] = "
+<col $options>
+</col>";
                 }
+                debug($options);
                 return new HtmlString("<colgroup>" . implode("\n", $cols) . "</colgroup>");
             }
         }
@@ -283,13 +298,16 @@ class GridView
             $cells[] = $column->renderHeaderCell();
         }
 
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->headerRowOptions,
-            array_keys($this->headerRowOptions)
-        ));
+        $options = implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $this->headerRowOptions,
+                array_keys($this->headerRowOptions)
+            )
+        );
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
 
@@ -313,8 +331,12 @@ class GridView
         }
         if (empty($rows) && $this->emptyText !== false) {
             $colspan = count($this->columns);
-            return "<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>";
+            return "<tbody>\n<tr>
+        <td colspan=\"$colspan\">" . $this->renderEmpty() . "</td>
+    </tr>\n</tbody>";
         }
+
+
         return "<tbody>\n" . implode("\n", $rows) . "\n</tbody>";
     }
 
@@ -339,15 +361,20 @@ class GridView
 
         $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
 
-        $trOptions = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $options,
-            array_keys($options)
-        ));
+        // $trOptions = implode(
+// ' ',
+// array_map(
+// function ($v, $k) {
+// return sprintf("%s=\"%s\"", $k, $v);
+// },
+// $options,
+// array_keys($options)
+// )
+// );
 
-        return new HtmlString("<tr $trOptions>" . implode("", $cells) . '</tr>');
+        $options = Html::renderTagAttributes($options);
+
+        return new HtmlString("<tr $options>" . implode("", $cells) . '</tr>');
     }
 
     /**

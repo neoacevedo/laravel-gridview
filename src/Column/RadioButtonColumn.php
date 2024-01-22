@@ -21,6 +21,7 @@ namespace neoacevedo\gridview\Column;
 
 use Closure;
 use Illuminate\Support\HtmlString;
+use neoacevedo\gridview\Support\Html;
 
 /**
  * RadioButtonColumn displays a column of radio buttons in a grid view.
@@ -66,13 +67,14 @@ class RadioButtonColumn extends Column
 
         $options['name'] = $this->name;
 
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $options,
-            array_keys($options)
-        ));
+        // $options = implode(' ', array_map(
+        //     function ($v, $k) {
+        //         return sprintf("%s=\"%s\"", $k, $v);
+        //     },
+        //     $options,
+        //     array_keys($options)
+        // ));
+        $options = Html::renderTagAttributes($options);
 
         return new HtmlString('<input type="radio" ' . $options . ' />');
     }

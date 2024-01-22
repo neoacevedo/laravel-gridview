@@ -1,4 +1,4 @@
-<table data-toggle="table" {{ $attributes }}>
+<table data-toggle="table" data-pagination="true" {!! $tableOptions !!}>
     {!! $columnGroup !!}
     {!! $tableHeader !!}
     {!! $tableBody !!}

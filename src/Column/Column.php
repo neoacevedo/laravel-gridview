@@ -21,6 +21,7 @@ namespace neoacevedo\gridview\Column;
 
 use Closure;
 use Illuminate\Support\HtmlString;
+use neoacevedo\gridview\Support\Html;
 
 /**
  * Column es la clase base de todas las clases de columnas de [[GridView]] o [[GridViewComponent]].
@@ -40,15 +41,34 @@ class Column
     public array $headerOptions = [];
 
     /** @var array */
-    public $options = [];
+    public array $options = [];
 
     /** @var boolean */
     public $visible = true;
 
-    public string $emptyCell = '&nbsp;';
-
     /** @var \neoacevedo\gridview\GridView */
     public $grid;
+
+    /**
+     * Constructor
+     */
+    public function __construct($config = [])
+    {
+        $this->options = $config['options'] ?? [];
+
+        $this->header = @$config['header'];
+
+        $this->headerOptions = $config['headerOptions'] ?? [];
+
+        $this->contentOptions = $config['contentOptions'] ?? [];
+
+        if (isset($config['visible'])) {
+            $this->visible = $config['visible'];
+        }
+
+        $this->grid = $config['grid'] ?? null;
+    }
+
 
     /**
      * Renders the data cell content.
@@ -62,13 +82,9 @@ class Column
         if ($this->contentOptions instanceof Closure) {
             $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
         } else {
-            $options = implode(' ', array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->contentOptions,
-                array_keys($this->contentOptions)
-            ));
+            $options = "";
+
+            $options = Html::renderTagAttributes($this->contentOptions);
         }
         return new HtmlString("<td $options>" . $this->renderDataCellContent($model, $key, $index) . '</td>');
     }
@@ -79,14 +95,19 @@ class Column
      */
     public function renderHeaderCell()
     {
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->headerOptions,
-            array_keys($this->headerOptions)
-        ));
-        return new HtmlString("<th $options>" . $this->renderHeaderCellContent() . "</th>");
+        $options = " ";
+        $options .= implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $this->headerOptions,
+                array_keys($this->headerOptions)
+            )
+        );
+
+        return new HtmlString("<th$options>" . $this->renderHeaderCellContent() . "</th>");
     }
 
     /**
@@ -96,7 +117,7 @@ class Column
      */
     protected function getHeaderCellLabel()
     {
-        return $this->emptyCell;
+        return $this->grid->emptyCell;
     }
 
     /**
@@ -109,9 +130,10 @@ class Column
     protected function renderDataCellContent($model, $key, $index)
     {
         if ($this->content !== null) {
+            debug(call_user_func($this->content, $model, $key, $index, $this));
             return call_user_func($this->content, $model, $key, $index, $this);
         }
-        return $this->emptyCell;
+        return $this->grid->emptyCell;
     }
 
     /**

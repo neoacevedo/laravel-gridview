@@ -100,9 +100,7 @@ class GridViewAsset
         $js = <<<HTML
             <script>
                 document.addEventListener('DOMContentLoaded', function () {                   
-                    $("$tableId").DataTable({
-                        orderCellsTop: true
-                    });
+                    
                 });
             </script>
         HTML;

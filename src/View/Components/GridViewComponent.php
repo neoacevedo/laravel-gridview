@@ -154,9 +154,6 @@ class GridViewComponent extends Component
     /** @var array|Closure */
     public $rowOptions = [];
 
-    /** @var array */
-    public $tableOptions = ['class' => 'table table-striped table-bordered'];
-
     /**
      * Constructor.
      *
@@ -167,13 +164,10 @@ class GridViewComponent extends Component
      * @param array $columns grid column configuration
      */
     public function __construct(
-        $tableOptions = ['class' => 'table table-striped table-bordered'],
         $dataProvider = [],
         $columns = [],
         $headerRowOptions = []
     ) {
-        $this->tableOptions = $tableOptions;
-
         $this->dataProvider = $dataProvider;
 
         $this->columns = $columns;
@@ -199,20 +193,11 @@ class GridViewComponent extends Component
      */
     public function render()
     {
-        $tableOptions = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->tableOptions,
-            array_keys($this->tableOptions)
-        ));
-
         $columnGroup = $this->renderColumnGroup();
         $tableHeader = $this->renderTableHeader();
         $tableBody = $this->renderTableBody();
 
         return view('components.gridview', [
-            'tableOptions' => $tableOptions,
             'tableHeader' => $tableHeader,
             'columnGroup' => $columnGroup,
             'tableBody' => $tableBody
@@ -230,13 +215,16 @@ class GridViewComponent extends Component
             if (!empty($column->options)) {
                 $cols = [];
                 foreach ($this->columns as $col) {
-                    $options = implode(' ', array_map(
-                        function ($v, $k) {
-                            return sprintf("%s=\"%s\"", $k, $v);
-                        },
-                        $col->options,
-                        array_keys($col->options)
-                    ));
+                    $options = implode(
+                        ' ',
+                        array_map(
+                            function ($v, $k) {
+                                return sprintf("%s=\"%s\"", $k, $v);
+                            },
+                            $col->options,
+                            array_keys($col->options)
+                        )
+                    );
                     $cols[] = "<col $options></col>";
                 }
                 return new HtmlString("<colgroup>" . implode("\n", $cols) . "</colgroup>");
@@ -254,13 +242,16 @@ class GridViewComponent extends Component
         if ($this->emptyText === false) {
             return '';
         }
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->emptyTextOptions,
-            array_keys($this->emptyTextOptions)
-        ));
+        $options = implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $this->emptyTextOptions,
+                array_keys($this->emptyTextOptions)
+            )
+        );
 
         $tag = Arr::forget($this->emptyTextOptions, 'tag');
         if (!$tag) {
@@ -310,13 +301,16 @@ class GridViewComponent extends Component
             $cells[] = $column->renderHeaderCell();
         }
 
-        $options = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $this->headerRowOptions,
-            array_keys($this->headerRowOptions)
-        ));
+        $options = implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $this->headerRowOptions,
+                array_keys($this->headerRowOptions)
+            )
+        );
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
 
@@ -344,13 +338,16 @@ class GridViewComponent extends Component
 
         $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
 
-        $trOptions = implode(' ', array_map(
-            function ($v, $k) {
-                return sprintf("%s=\"%s\"", $k, $v);
-            },
-            $options,
-            array_keys($options)
-        ));
+        $trOptions = implode(
+            ' ',
+            array_map(
+                function ($v, $k) {
+                    return sprintf("%s=\"%s\"", $k, $v);
+                },
+                $options,
+                array_keys($options)
+            )
+        );
 
         return new HtmlString("<tr $trOptions>" . implode("", $cells) . '</tr>');
     }
