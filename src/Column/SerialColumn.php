@@ -35,7 +35,7 @@ namespace neoacevedo\gridview\Column;
  */
 class SerialColumn extends Column
 {
-    /** @var string|null */
+    /** @var string|null The header cell content. */
     public $header = "#";
 
     /**

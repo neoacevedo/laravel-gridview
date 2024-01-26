@@ -39,16 +39,16 @@ use neoacevedo\gridview\Support\Html;
  */
 class CheckboxColumn extends Column
 {
-    /** @var string */
+    /** @var string The name of the input checkbox input fields. */
     public $name = 'selection';
 
-    /** @var array|Closure */
+    /** @var array|Closure The HTML attributes for checkboxes. */
     public $checkboxOptions = [];
 
-    /** @var bool */
+    /** @var bool Whether it is possible to select multiple rows. */
     public $multiple = true;
 
-    /** @var string */
+    /** @var string The css class that will be used to find the checkboxes. */
     public $cssClass;
 
     /**

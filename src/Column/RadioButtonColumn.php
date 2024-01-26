@@ -39,10 +39,10 @@ use neoacevedo\gridview\Support\Html;
  */
 class RadioButtonColumn extends Column
 {
-    /** @var string */
+    /** @var string The name of the input radio button input fields. */
     public string $name = 'radioButtonSelection';
 
-    /** @var array|Closure */
+    /** @var array|Closure The HTML attributes for the radio buttons. */
     public $radioOptions = [];
 
     /**
@@ -53,7 +53,7 @@ class RadioButtonColumn extends Column
         if ($this->content !== null) {
             return parent::renderDataCellContent($model, $key, $index);
         }
-        if ($this->checkboxOptions instanceof Closure) {
+        if ($this->radioOptions instanceof Closure) {
             $options = call_user_func($this->radioOptions, $model, $key, $index, $this);
         } else {
             $options = $this->radioOptions;
@@ -61,19 +61,9 @@ class RadioButtonColumn extends Column
         if (!isset($options['value'])) {
             $options['value'] = is_array($key) ? json_encode($key) : $key;
         }
-        if ($this->cssClass !== null) {
-            $options['class'] = $this->cssClass;
-        }
 
-        $options['name'] = $this->name;
+        $options['checked'] = isset($options['checked']) ? $options['checked'] : false;
 
-        // $options = implode(' ', array_map(
-        //     function ($v, $k) {
-        //         return sprintf("%s=\"%s\"", $k, $v);
-        //     },
-        //     $options,
-        //     array_keys($options)
-        // ));
         $options = Html::renderTagAttributes($options);
 
         return new HtmlString('<input type="radio" ' . $options . ' />');

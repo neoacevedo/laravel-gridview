@@ -23,26 +23,27 @@ use Closure;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use neoacevedo\gridview\Column\DataColumn;
 use neoacevedo\gridview\Support\Html;
 
 /**
- * The GridView object is used to display data in a grid.
- *
- * A basic usage looks like the following:
+ * GridView is used to display data in a table.
+ * 
+ * A basic usage looks like:
  * ```php
  * <?= GridView::widget([
- *   'dataProvider' => $dataProvider,
- *   'columns' => [
- *       'id',
- *       'name',
- *       'created_at:datetime',
- *       // ...
- *   ],
+ *    'dataProvider' => $dataProvider.
+ *     'columns' => [
+ *        'id',
+ *        'name',
+ *        'created_at:datetime',
+ *        // ...
+ *    ],
  * ]) ?>
  * ```
+ * 
+ *  The `dataProvider` property maybe the an array with nested arrays each one of type `key => value` or you can pass also a `Collection`.
  */
 class GridView
 {
@@ -65,14 +66,14 @@ class GridView
      *
      * ```php
      * [
-     * ['class' => SerialColumn::class],
-     * [
-     * 'class' => DataColumn::class, // this line is optional
-     * 'attribute' => 'name',
-     * 'format' => 'text',
-     * 'label' => 'Name',
-     * ],
-     * ['class' => CheckboxColumn::class],
+     *     ['class' => SerialColumn::class],
+     *     [
+     *         'class' => DataColumn::class, // this line is optional
+     *         'attribute' => 'name',
+     *         'format' => 'text',
+     *         'label' => 'Name',
+     *     ],
+     *     ['class' => CheckboxColumn::class],
      * ]
      * ```
      *
@@ -88,9 +89,9 @@ class GridView
      *
      * ```php
      * [
-     * 'id',
-     * 'amount:Total Amount',
-     * 'created_at:Created at',
+     *     'id',
+     *     'amount:Total Amount',
+     *     'created_at:Created at',
      * ]
      * ```
      *
@@ -102,8 +103,8 @@ class GridView
      * 'author.name',
      * // full syntax
      * [
-     * 'attribute' => 'author.name',
-     * // ...
+     *     'attribute' => 'author.name',
+     *     // ...
      * ]
      * ```
      */
@@ -113,7 +114,7 @@ class GridView
      * The data provider for the view.
      * @var array|\Illuminate\Database\Eloquent\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public $dataProvider = [];
+    public $dataProvider = null;
 
     /**
      * The default data column class if the class name is not explicitly specified when configuring a data column.
@@ -147,12 +148,6 @@ class GridView
      */
     public array $headerRowOptions = [];
 
-    /**
-     * The formatter used to format model attribute values into displayable texts.
-     * @var array|null
-     */
-    public $formatter;
-
     /** @var array|Closure */
     public $rowOptions = [];
 
@@ -160,22 +155,24 @@ class GridView
     public $tableOptions = ['class' => 'table table-striped table-bordered'];
 
     /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        if ($this->emptyText === null) {
-            $this->emptyText = 'No results found.';
-        }
-    }
-
-    /**
      * Get the view / contents that represent the [[GridView]].
      * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
     public function widget($config = [])
     {
-        $this->dataProvider = $config['dataProvider'];
+        if (isset($config['dataProvider'])) {
+            $this->dataProvider = $config['dataProvider'];
+        }
+
+        $this->emptyText = $config['emptyText'] ?? null;
+
+        if ($this->dataProvider === null) {
+            throw new Exception('The "dataProvider" property must be set.', 500);
+        }
+
+        if ($this->emptyText === null) {
+            $this->emptyText = 'No results found.';
+        }
 
         $this->columns = $config['columns'];
 
@@ -258,28 +255,13 @@ class GridView
         /** @var \neoacevedo\gridview\Column\Column $column */
         foreach ($this->columns as $column) {
             if (!empty($column->options)) {
-                $options = " ";
                 $cols = [];
                 /** @var \neoacevedo\gridview\Column\Column $col */
                 foreach ($this->columns as $col) {
-                    // $options = implode(
-// ' ',
-// array_map(
-// function ($v, $k) {
-// return sprintf("%s=\"%s\"", $k, $v);
-// },
-// $col->options,
-// array_keys($col->options)
-// )
-// );
-                    foreach ($options as $option => $value) {
-                        $options .= rtrim(" $option=\"$value\"");
-                    }
-                    $cols[] = "
-<col $options>
-</col>";
+                    $options = Html::renderTagAttributes($col->options);
+                    $cols[] = "<col $options></col>";
                 }
-                debug($options);
+
                 return new HtmlString("<colgroup>" . implode("\n", $cols) . "</colgroup>");
             }
         }
@@ -298,16 +280,7 @@ class GridView
             $cells[] = $column->renderHeaderCell();
         }
 
-        $options = implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->headerRowOptions,
-                array_keys($this->headerRowOptions)
-            )
-        );
+        $options = Html::renderTagAttributes($this->headerRowOptions);
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
 
@@ -331,12 +304,8 @@ class GridView
         }
         if (empty($rows) && $this->emptyText !== false) {
             $colspan = count($this->columns);
-            return "<tbody>\n<tr>
-        <td colspan=\"$colspan\">" . $this->renderEmpty() . "</td>
-    </tr>\n</tbody>";
+            return "<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>";
         }
-
-
         return "<tbody>\n" . implode("\n", $rows) . "\n</tbody>";
     }
 
@@ -361,17 +330,6 @@ class GridView
 
         $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
 
-        // $trOptions = implode(
-// ' ',
-// array_map(
-// function ($v, $k) {
-// return sprintf("%s=\"%s\"", $k, $v);
-// },
-// $options,
-// array_keys($options)
-// )
-// );
-
         $options = Html::renderTagAttributes($options);
 
         return new HtmlString("<tr $options>" . implode("", $cells) . '</tr>');
@@ -385,14 +343,15 @@ class GridView
      */
     protected function createDataColumn($text)
     {
-        if (!preg_match('/^([^:]+)(:(.*))?$/', $text, $matches)) {
-            throw new Exception('The column must be specified in the format of "attribute" or "attribute:label"');
+        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
+            throw new Exception('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
         }
 
         return new DataColumn([
+            'grid' => $this,
             'attribute' => $matches[1],
-            'label' => isset($matches[3]) ? $matches[3] : null,
-            'grid' => $this
+            'format' => isset($matches[3]) ? $matches[3] : 'text',
+            'label' => isset($matches[5]) ? $matches[5] : null,
         ]);
     }
 

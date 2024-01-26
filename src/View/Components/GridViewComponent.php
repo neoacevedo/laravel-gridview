@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 use neoacevedo\gridview\Column\DataColumn;
+use neoacevedo\gridview\Support\Html;
 
 /**
  * This is the Laravel 7+ component for the [[GridView]].
@@ -55,7 +56,7 @@ class GridViewComponent extends Component
      * @see \yii\helpers\Html::renderTagAttributes() for details on how attributes are being rendered.
      * @see caption
      */
-    public $captionOptions = [];
+    public $captionOptions;
 
     /**
      * @var array grid column configuration. Each array element represents the configuration
@@ -105,25 +106,25 @@ class GridViewComponent extends Component
      * ]
      * ```
      */
-    public $columns = [];
+    public $columns;
 
     /**
      * The data provider for the view.
      * @var array|\Illuminate\Database\Eloquent\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public $dataProvider = [];
+    public $dataProvider;
 
     /**
      * The default data column class if the class name is not explicitly specified when configuring a data column.
      * @var string
      */
-    public $dataColumnClass = null;
+    public $dataColumnClass;
 
     /**
      * The HTML display when the content of a cell is empty.
      * @var string
      */
-    public string $emptyCell = '&nbsp;';
+    public string $emptyCell;
 
     /**
      * The HTML content to be displayed when [[dataProvider]] does not have any data.
@@ -135,15 +136,13 @@ class GridViewComponent extends Component
      * The HTML attributes for the emptyText of the list.
      * @var array
      */
-    public array $emptyTextOptions = [
-        'class' => 'empty',
-    ];
+    public array $emptyTextOptions;
 
     /**
      * The HTML attributes for the table header row.
      * @var array
      */
-    public array $headerRowOptions = [];
+    public array $headerRowOptions;
 
     /**
      * The formatter used to format model attribute values into displayable texts.
@@ -152,27 +151,64 @@ class GridViewComponent extends Component
     public $formatter;
 
     /** @var array|Closure */
-    public $rowOptions = [];
+    public $rowOptions;
 
     /**
      * Constructor.
      *
      * The default implementation initializes the object with the given parameters.
      *
-     * @param array $tableOptions HTML attributes for the table
+     * @param string|null $caption
+     * @param array $captionOptions
+     * @param array $columns
      * @param array|\Illuminate\Database\Eloquent\Collection $dataProvider The data provider for the view.
      * @param array $columns grid column configuration
+     * @param array|null $headerRowOptions The HTML attributes for the table header row.
+     * @param array|null $formatter The formatter used to format model attribute values into displayable texts.
+     * @param array|Closure $rowOptions
      */
     public function __construct(
-        $dataProvider = [],
-        $columns = [],
-        $headerRowOptions = []
+        array $dataProvider = null,
+        mixed $caption = null,
+        array $captionOptions = [],
+        array $columns = [],
+        mixed $dataColumnClass = null,
+        string $emptyCell = '&nbsp;',
+        mixed $emptyText = null,
+        array $emptyTextOptions = ['class' => 'empty'],
+        array $headerRowOptions = [],
+        mixed $formatter = null,
+        mixed $rowOptions = null
     ) {
         $this->dataProvider = $dataProvider;
 
+        $this->caption = $caption;
+
+        $this->captionOptions = $captionOptions;
+
         $this->columns = $columns;
 
+        $this->dataColumnClass = $dataColumnClass;
+
+        $this->emptyCell = $emptyCell;
+
+        $this->emptyText = $emptyText;
+
+        $this->emptyTextOptions = $emptyTextOptions;
+
         $this->headerRowOptions = $headerRowOptions;
+
+        $this->formatter = $formatter;
+
+        $this->rowOptions = $rowOptions;
+
+        if ($this->dataProvider === null) {
+            throw new Exception('The "dataProvider" property must be set.', 500);
+        }
+
+        if ($this->emptyText === null) {
+            $this->emptyText = 'No results found.';
+        }
 
         $this->initColumns();
     }
@@ -215,16 +251,7 @@ class GridViewComponent extends Component
             if (!empty($column->options)) {
                 $cols = [];
                 foreach ($this->columns as $col) {
-                    $options = implode(
-                        ' ',
-                        array_map(
-                            function ($v, $k) {
-                                return sprintf("%s=\"%s\"", $k, $v);
-                            },
-                            $col->options,
-                            array_keys($col->options)
-                        )
-                    );
+                    $options = Html::renderTagAttributes($col->options);
                     $cols[] = "<col $options></col>";
                 }
                 return new HtmlString("<colgroup>" . implode("\n", $cols) . "</colgroup>");
@@ -242,16 +269,7 @@ class GridViewComponent extends Component
         if ($this->emptyText === false) {
             return '';
         }
-        $options = implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->emptyTextOptions,
-                array_keys($this->emptyTextOptions)
-            )
-        );
+        $options = Html::renderTagAttributes($this->emptyTextOptions);
 
         $tag = Arr::forget($this->emptyTextOptions, 'tag');
         if (!$tag) {
@@ -301,16 +319,7 @@ class GridViewComponent extends Component
             $cells[] = $column->renderHeaderCell();
         }
 
-        $options = implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->headerRowOptions,
-                array_keys($this->headerRowOptions)
-            )
-        );
+        $options = Html::renderTagAttributes($this->headerRowOptions);
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
 
@@ -338,18 +347,9 @@ class GridViewComponent extends Component
 
         $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
 
-        $trOptions = implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $options,
-                array_keys($options)
-            )
-        );
+        $options = Html::renderTagAttributes($options);
 
-        return new HtmlString("<tr $trOptions>" . implode("", $cells) . '</tr>');
+        return new HtmlString("<tr $options>" . implode("", $cells) . '</tr>');
     }
 
     /**
@@ -360,14 +360,15 @@ class GridViewComponent extends Component
      */
     protected function createDataColumn($text)
     {
-        if (!preg_match('/^([^:]+)(:(.*))?$/', $text, $matches)) {
-            throw new Exception('The column must be specified in the format of "attribute" or "attribute:label"');
+        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
+            throw new Exception('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
         }
 
         return new DataColumn([
+            'grid' => $this,
             'attribute' => $matches[1],
-            'label' => isset($matches[3]) ? $matches[3] : null,
-            'grid' => $this
+            'format' => isset($matches[3]) ? $matches[3] : 'text',
+            'label' => isset($matches[5]) ? $matches[5] : null,
         ]);
     }
 

@@ -28,25 +28,25 @@ use neoacevedo\gridview\Support\Html;
  */
 class Column
 {
-    /** @var Callable */
+    /** @var Callable This is a callable that will be used to generate the content of each cell. */
     public $content;
 
-    /** @var array|Closure */
+    /** @var array|Closure The HTML attributes for the data cell tag. */
     public $contentOptions = [];
 
-    /** @var string|null */
+    /** @var string|null The header cell content. */
     public $header;
 
-    /** @var array */
+    /** @var array The HTML attributes for the header cell tag. */
     public array $headerOptions = [];
 
-    /** @var array */
-    public array $options = [];
+    /** @var array The HTML attribute for the column group tag. */
+    public $options = [];
 
-    /** @var boolean */
+    /** @var boolean Whether this column is visible. */
     public $visible = true;
 
-    /** @var \neoacevedo\gridview\GridView */
+    /** @var \neoacevedo\gridview\GridView The gridview object that owns this column */
     public $grid;
 
     /**
@@ -95,19 +95,9 @@ class Column
      */
     public function renderHeaderCell()
     {
-        $options = " ";
-        $options .= implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->headerOptions,
-                array_keys($this->headerOptions)
-            )
-        );
+        $options = Html::renderTagAttributes($this->headerOptions);
 
-        return new HtmlString("<th$options>" . $this->renderHeaderCellContent() . "</th>");
+        return new HtmlString("<th $options>" . $this->renderHeaderCellContent() . "</th>");
     }
 
     /**
@@ -130,7 +120,6 @@ class Column
     protected function renderDataCellContent($model, $key, $index)
     {
         if ($this->content !== null) {
-            debug(call_user_func($this->content, $model, $key, $index, $this));
             return call_user_func($this->content, $model, $key, $index, $this);
         }
         return $this->grid->emptyCell;
