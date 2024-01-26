@@ -1,7 +1,7 @@
 Laravel GridView
 ============
 
-Laravel GridView es un paquete para generar una tabla con datos.
+Laravel GridView es un paquete para generar una tabla con datos. Permite generar de manera rápida una tabla a partir de un array de modelos Eloquent o Collections o también de arrays anidados, usando los atributos como columnas y cada fila es un modelo con sus datos.
 
 Instalación
 ------------
@@ -21,7 +21,6 @@ o agregue
 ```
 
 a la sección require de su archivo `composer.json`.
-```
 
 Uso
 -----
@@ -148,11 +147,12 @@ Para Laravel 7+, se puede de la forma anterior, o como componente:
 Para la propiedad `dataProvider` puede pasarse un array o una colección. Para esta última desde el controlador puede pasarla desde la base de datos.
 
 En el array de columnas, puede especificar la clase que se encargará de renderizar el contenido de toda la columna a través de la propiedad `class`. Las clases de columna que soporta GridView son:
-- \neoacevedo\gridview\Column\ActionColumn: Columna que se encarga de renderizar botones para diferentes acciones sobre la fila.
-- \neoacevedo\gridview\Column\CheckboxColumn: Columna que se encarga de renderizar checkboxes.
-- \neoacevedo\gridview\Column\DataColumn: Columna que se encarga de renderizar la mayoría de los datos. Es la columna predefinida si se omite la propiedad `class`.
-- \neoacevedo\gridview\Column\RadioButtonColumn: Columna que se encarga de renderizar inputs de radio
-- \neoacevedo\gridview\Column\SerialColumn: Columna que renderiza el número de cada fila.
+
+- `\neoacevedo\gridview\Column\ActionColumn`: Columna que se encarga de renderizar botones para diferentes acciones sobre la fila.
+- `\neoacevedo\gridview\Column\CheckboxColumn`: Columna que se encarga de renderizar checkboxes.
+- `\neoacevedo\gridview\Column\DataColumn`: Columna que se encarga de renderizar la mayoría de los datos. Es la columna predefinida si se omite la propiedad `class`.
+- `\neoacevedo\gridview\Column\RadioButtonColumn`: Columna que se encarga de renderizar inputs de radio
+- `\neoacevedo\gridview\Column\SerialColumn`: Columna que renderiza el número de cada fila.
 
 Con cualquiera de las dos opciones, se obtendrá una tabla como la siguiente:
 

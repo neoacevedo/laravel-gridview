@@ -1,19 +1,21 @@
 {
     "name": "neoacevedo/laravel-gridview",
-    "description": "Gridview al estilo Yii2",
+    "description": "Laravel GridView es un paquete para generar una tabla con datos de array de Arrays/Eloquent/Collections.",
     "type": "laravel-extension",
     "keywords": [
         "laravel",
-        "extension",
-        "gridview"
+        "html",
+        "gridview",
+        "table"
     ],
     "license": "GPL-3.0+",
-    "minimum-stability": "stable",
-    "version": "22.11.12",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "version": "24.01.25-RC1",
     "authors": [
         {
             "name": "Néstor Acevedo",
-            "email": "clientes@neoacevedo.co"
+            "email": "nestor.acevedo.romero@gmail.com"
         }
     ],
     "require": {
