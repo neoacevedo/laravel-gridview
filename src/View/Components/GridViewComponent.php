@@ -110,7 +110,7 @@ class GridViewComponent extends Component
 
     /**
      * The data provider for the view.
-     * @var array|\Illuminate\Database\Eloquent\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @var \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public $dataProvider;
 
@@ -150,8 +150,42 @@ class GridViewComponent extends Component
      */
     public $formatter;
 
+    /**
+     * The layout that determines how different sections of the grid view should be organized. The following tokens will be replaced with the corresponding section contents:
+     * - `{summary}`: the summary section.
+     * - `{errors}`: the filter model error summary.
+     * - `{items}`: the list items.
+     * - `{sorter}`: the sorter.
+     * - `{pager}`: the pager.
+     *  
+     * @var string
+     */
+    public $layout;
+
     /** @var array|Closure */
     public $rowOptions;
+
+    /**
+     * Whether to show the header section of the grid table.
+     * @var boolean
+     */
+    public $showHeader;
+
+    /**
+     * The HTML content to be displayed as the summary of the grid view.
+     * @var string
+     */
+    public $summary;
+
+    /**
+     * The HTML attributes for the summary of the grid view.
+     * @var array
+     */
+    public $summaryOptions;
+
+
+    /** @var array */
+    public $tableOptions;
 
     /**
      * Constructor.
@@ -161,14 +195,14 @@ class GridViewComponent extends Component
      * @param string|null $caption
      * @param array $captionOptions
      * @param array $columns
-     * @param array|\Illuminate\Database\Eloquent\Collection $dataProvider The data provider for the view.
+     * @param \Illuminate\Contracts\Pagination\LengthAwarePaginator $dataProvider The data provider for the view.
      * @param array $columns grid column configuration
      * @param array|null $headerRowOptions The HTML attributes for the table header row.
      * @param array|null $formatter The formatter used to format model attribute values into displayable texts.
      * @param array|Closure $rowOptions
      */
     public function __construct(
-        array $dataProvider = null,
+        mixed $dataProvider = null,
         mixed $caption = null,
         array $captionOptions = [],
         array $columns = [],
@@ -178,7 +212,12 @@ class GridViewComponent extends Component
         array $emptyTextOptions = ['class' => 'empty'],
         array $headerRowOptions = [],
         mixed $formatter = null,
-        mixed $rowOptions = null
+        string $layout = "{summary}\n{items}\n{pager}",
+        mixed $rowOptions = null,
+        bool $showHeader = true,
+        string $summary = null,
+        array $summaryOptions = ['class' => 'summary'],
+        // array $tableOptions = ['class' => 'table table-striped table-bordered']
     ) {
         $this->dataProvider = $dataProvider;
 
@@ -200,7 +239,17 @@ class GridViewComponent extends Component
 
         $this->formatter = $formatter;
 
+        $this->layout = $layout;
+
         $this->rowOptions = $rowOptions;
+
+        $this->showHeader = $showHeader;
+
+        $this->summary = $summary;
+
+        $this->summaryOptions = $summaryOptions;
+
+        // $this->tableOptions = $tableOptions;
 
         if ($this->dataProvider === null) {
             throw new Exception('The "dataProvider" property must be set.', 500);
@@ -215,11 +264,11 @@ class GridViewComponent extends Component
 
     /**
      * Returns the data models.
-     * @return array|\Illuminate\Database\Eloquent\Collection
+     * @return array
      */
     public function getModels()
     {
-        return is_array($this->dataProvider) ? $this->dataProvider : $this->dataProvider->toArray();
+        return $this->dataProvider->items();
     }
 
     /**
@@ -229,14 +278,26 @@ class GridViewComponent extends Component
      */
     public function render()
     {
-        $columnGroup = $this->renderColumnGroup();
-        $tableHeader = $this->renderTableHeader();
-        $tableBody = $this->renderTableBody();
+        $summary = $content = $pager = '';
+        if (count($this->dataProvider) > 0) {
+            preg_match_all('/{\\w+}/', $this->layout, $matches);
+            for ($index = 0; $index < count($matches[0]); $index++) {
+                if ($matches[0][$index] === '{summary}') {
+                    $summary = $this->renderSummary();
+                } elseif ($matches[0][$index] === '{pager}') {
+                    $pager = $this->renderPager();
+                } else {
+                    $content = $this->renderSection($matches[0][$index]);
+                }
+            }
+        } else {
+            $content = $this->renderEmpty();
+        }
 
-        return view('components.gridview', [
-            'tableHeader' => $tableHeader,
-            'columnGroup' => $columnGroup,
-            'tableBody' => $tableBody
+        return view('gridview::components.table', [
+            'content' => $content,
+            'pager' => $pager,
+            'resumen' => $summary,
         ]);
     }
 
@@ -262,7 +323,7 @@ class GridViewComponent extends Component
 
     /**
      * Renders the HTML content indicating that the list view has no data.
-     * @return HtmlString
+     * @return string|HtmlString
      */
     public function renderEmpty()
     {
@@ -271,28 +332,76 @@ class GridViewComponent extends Component
         }
         $options = Html::renderTagAttributes($this->emptyTextOptions);
 
-        $tag = Arr::forget($this->emptyTextOptions, 'tag');
-        if (!$tag) {
+        Arr::forget($this->emptyTextOptions, 'tag');
+        if (!$this->emptyTextOptions['tag']) {
             $tag = "div";
         }
 
         return new HtmlString("<$tag $options>{$this->emptyText}</$tag>");
     }
 
+    public function renderFilters()
+    {
+
+    }
+
+    /**
+     * Renders dtje data ,pdeñs fpr tje grod voew-
+     * @return string The HTML code for the table.
+     */
+    public function renderItems(): string
+    {
+        // $caption = $this->renderCaption();
+        $columnGroup = $this->renderColumnGroup();
+        $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
+        $tableBody = $this->renderTableBody();
+        // $tableFooter = false;
+        // $tableFooterAfterBody = false;
+        // if ($this->showFooter) {
+        //     if ($this->placeFooterAfterBody) {
+        //         $tableFooterAfterBody = $this->renderTableFooter();
+        //     } else {
+        //         $tableFooter = $this->renderTableFooter();
+        //     }
+        // }
+        $content = array_filter([
+            // $caption,
+            $columnGroup,
+            $tableHeader,
+            // $tableFooter,
+            $tableBody,
+            // $tableFooterAfterBody,
+        ]);
+
+        return implode("\n", $content);
+    }
+
+    /**
+     * Renders the pager.
+     * @return string The rendering result.
+     */
+    public function renderPager(): string
+    {
+        $pagination = $this->dataProvider->hasPages();
+
+        if ($pagination === false) {
+            return '';
+        }
+
+        return $this->dataProvider->links();
+    }
+
     /**
      * Renders the table body.
      * @return string
      */
-    public function renderTableBody()
+    public function renderTableBody(): string
     {
         $models = array_values($this->getModels());
-        if (is_array($this->dataProvider)) {
-            $keys = array_keys($this->dataProvider);
-        } elseif ($this->dataProvider instanceof Collection) {
-            $keys = $this->dataProvider->keys();
-        } else {
-            $keys = array_keys($this->dataProvider->items());
-        }
+
+        $keys = array_keys($this->dataProvider->items());
+
+
         $rows = [];
 
         foreach ($models as $index => $model) {
@@ -300,6 +409,7 @@ class GridViewComponent extends Component
 
             $rows[] = $this->renderTableRow($model, $key, $index);
         }
+
         if (empty($rows) && $this->emptyText !== false) {
             $colspan = count($this->columns);
             return "<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>";
@@ -351,6 +461,70 @@ class GridViewComponent extends Component
 
         return new HtmlString("<tr $options>" . implode("", $cells) . '</tr>');
     }
+
+    /**
+     * Renders a section of the specified name.
+     * 
+     * If the named section is not supported, false will be returned.
+     * @param string $name The section name, e.g., {summary}, {items}.
+     * @return string|boolean The rendering result of the section, or false if the named section is not supported.
+     */
+    public function renderSection(string $name): mixed
+    {
+        switch ($name) {
+            case '{summary}':
+                return $this->renderSummary();
+            case '{items}':
+                return $this->renderItems();
+            case '{pager}':
+                return $this->renderPager();
+            // case '{sorter}':
+            //     return $this->renderSorter();
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Renders the summary text
+     * @return string
+     */
+    public function renderSummary()
+    {
+        $count = $this->dataProvider->count();
+        if ($count <= 0) {
+            return '';
+        }
+        $summaryOptions = $this->summaryOptions;
+        Arr::forget($summaryOptions, 'tag');
+        $htmlOptions = Html::renderTagAttributes($summaryOptions);
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $pagination */
+        if ($this->dataProvider->hasPages() === true) {
+            $totalCount = $this->dataProvider->total();
+            $begin = ($this->dataProvider->currentPage() - 1) * $this->dataProvider->perPage() + 1;
+            $end = $begin + $count - 1;
+
+            if ($begin > $end) {
+                $begin = $end;
+            }
+
+            if (($summaryContent = $this->summary) === null) {
+                return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+            }
+        } else {
+            $begin = 1;
+            $end = $totalCount = $count;
+            if (($summaryContent = $this->summary) === null) {
+                return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+            }
+        }
+        if ($summaryContent === '') {
+            return '';
+        }
+        return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+    }
+
+    #region protected
 
     /**
      * Creates a [[DataColumn]] object based on a string in the format of "attribute" or "attribute:label".
@@ -417,4 +591,6 @@ class GridViewComponent extends Component
             $this->columns[$i] = $column;
         }
     }
+
+    #endregion
 }

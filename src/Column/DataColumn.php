@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Number;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use neoacevedo\gridview\Support\Html;
@@ -33,6 +33,12 @@ class DataColumn extends Column
 {
     /** @var string */
     public $attribute;
+
+    /**
+     * The HTML code representing a filter input (e.g. a text field, a dropdown list) that is used for this data column.
+     * @var string|array|null|false
+     */
+    public $filter;
 
     /** @var string|null */
     public $label;
@@ -101,7 +107,7 @@ class DataColumn extends Column
      */
     protected function getHeaderCellLabel()
     {
-        /** @var array|\Illuminate\Database\Eloquent\Collection */
+        /** @var \Illuminate\Pagination\LengthAwarePaginator */
         $provider = $this->grid->dataProvider;
         if ($this->label === null) {
             if ($this->attribute === null) {
@@ -121,13 +127,15 @@ class DataColumn extends Column
                     $label = ucwords($label);
                 }
             } else {
-                $models = $provider;
+                $models = $provider instanceof Collection ? $provider->toArray() : $provider->items();
                 if (($model = reset($models)) instanceof Model) {
                     /** @var Model $model */
                     if (method_exists(Str::class, "headline")) {
-                        $label = Str::headline($this->attribute);
+                        $label = $this->attribute;
+                        $label = Str::headline($label);
                     } else {
-                        $label = str_replace(['-', '_'], " ", $this->attribute);
+                        $label = $this->attribute;
+                        $label = str_replace(['-', '_'], " ", $label);
                         $label = ucwords($label);
                     }
                 } else {
@@ -160,7 +168,7 @@ class DataColumn extends Column
             }
             return call_user_func($this->value, $model, $key, $index, $this);
         } elseif ($this->attribute !== null) {
-            return Arr::get((array) $model, $this->attribute);
+            return is_array($model) ? Arr::get($model, $this->attribute) : $model->getAttribute($this->attribute);
         }
         return null;
     }
@@ -171,7 +179,7 @@ class DataColumn extends Column
     protected function renderDataCellContent($model, $key, $index)
     {
         if ($this->content === null) {
-            $dataCellValue = $type = $format = '';
+            $dataCellValue = $type = '';
             if (is_string($this->format)) {
                 $type = $this->format;
                 $format = 'default';
@@ -181,34 +189,56 @@ class DataColumn extends Column
             }
             switch ($type) {
                 case 'datetime':
+                    /**
+                     * @var Carbon|int
+                     */
                     $value = $this->getDataCellValue($model, $key, $index);
-                    if ($format == 'default') {
-                        if (is_numeric($value)) {
-                            $dataCellValue = Carbon::createFromTimestamp($value)->toDateTimeString();
-                        } else {
-                            $dataCellValue = Carbon::createFromTimeString($value)->toDateTimeString();
-                        }
+                    if ($value instanceof Carbon) {
+                        $dataCellValue = $value->toDateTimeString();
                     } else {
-                        if (is_numeric($value)) {
-                            $dataCellValue = Carbon::createFromTimestamp($value)->toDateTime()->format($format);
+                        if ($format == 'default') {
+                            $dataCellValue = Carbon::createFromTimestamp($value, config('timezone'))->toDateTimeString();
                         } else {
-                            $dataCellValue = Carbon::createFromFormat($format, $value)->format($format);
+                            $value = Carbon::createFromTimestamp($value)->toDate();
+                            $dataCellValue = $value->format($format);
                         }
                     }
                     break;
                 case 'date':
+                    /**
+                     * @var Carbon|int
+                     */
                     $value = $this->getDataCellValue($model, $key, $index);
-                    if ($format == 'default') {
-                        $dataCellValue = Carbon::createFromTimestamp($this->getDataCellValue($model, $key, $index))->toDateString();
+                    if ($value instanceof Carbon) {
+                        $dataCellValue = $value->toDateString();
                     } else {
-                        $value = Carbon::createFromTimestamp($this->getDataCellValue($model, $key, $index))->toDate();
-                        $dataCellValue = $value->format($format);
+                        if ($format == 'default') {
+                            $value = Carbon::createFromTimestamp($value, config('timezone'))->toDate();
+                            $dataCellValue = $value->format('d M y');
+                        } else {
+                            $value = Carbon::createFromTimestamp($value)->toDate();
+                            $dataCellValue = $value->format($format);
+                        }
                     }
                     break;
                 case 'email':
                     $value = $this->getDataCellValue($model, $key, $index);
-                    $dataCellValue = new HtmlString("<a href=\"mailto:$value\">$value</a>");
+                    $dataCellValue = Str::of("<a href=\"mailto:$value\">$value</a>")->toHtmlString();
                     break;
+                case 'currency':
+                    $value = $this->getDataCellValue($model, $key, $index);
+                    if (substr(app()->version(), 0, 1) < 10) {
+                        $formatter = new \NumberFormatter(config('locale'), \NumberFormatter::CURRENCY);
+                        $dataCellValue = $formatter->formatCurrency($value, 'USD');
+                    } else {
+                        $dataCellValue = Number::curency($value, config('locale'));
+                    }
+                    break;
+                case 'html':
+                    $value = $this->getDataCellValue($model, $key, $index);
+                    $dataCellValue = Str::of($value)->toHtmlString();
+                    break;
+                case 'raw':
                 default:
                     $dataCellValue = $this->getDataCellValue($model, $key, $index);
             }
@@ -216,5 +246,14 @@ class DataColumn extends Column
             return $dataCellValue;
         }
         return parent::renderDataCellContent($model, $key, $index);
+    }
+
+    protected function renderFilterCellContent()
+    {
+        if (is_string($this->filter)) {
+            return $this->filter;
+        }
+
+
     }
 }

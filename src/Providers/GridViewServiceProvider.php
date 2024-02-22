@@ -20,6 +20,7 @@
 namespace neoacevedo\gridview\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use neoacevedo\gridview\View\Components\GridViewComponent;
 
@@ -32,28 +33,29 @@ class GridViewServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'gridview');
-
         if ($this->app->runningInConsole()) {
-            $this->publishAssets();
+            $this->publishViews();
         }
 
         if (substr(app()->version(), 0, 1) >= 7) {
             Blade::component('package-gridview', GridViewComponent::class);
         }
+
+        $this->loadViewsFrom(dirname(__DIR__) . '/resources/views', 'gridview');
+
     }
 
     /**
-     * Publish datatables assets.
+     * Publishes component/vendor views.
      */
-    protected function publishAssets(): void
+    protected function publishViews(): void
     {
         $this->publishes([
-            __DIR__.'/../resources/views' => base_path('/resources/views/vendor/gridview'),
+            dirname(__DIR__) . '/resources/views' => base_path('/resources/views/vendor/gridview'),
         ], 'gridview');
 
         $this->publishes([
-            __DIR__.'/../resources/views/components' => base_path('/resources/views/components'),
+            dirname(__DIR__) . '/resources/views' => base_path('/resources/views/components'),
         ]);
     }
 

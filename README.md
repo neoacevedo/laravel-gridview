@@ -1,7 +1,7 @@
 Laravel GridView
 ============
 
-Laravel GridView es un paquete para generar una tabla con datos. Permite generar de manera rápida una tabla a partir de un array de modelos Eloquent o Collections o también de arrays anidados, usando los atributos como columnas y cada fila es un modelo con sus datos.
+Laravel GridView es un paquete para generar una tabla con datos, inspirado en el [widget yii2 GridView](https://www.yiiframework.com/doc/guide/2.0/es/output-data-widgets#grid-view). Permite generar de manera rápida una tabla a partir de modelos Eloquent o Collections paginados o también de arrays anidados paginados, usando los atributos como columnas y cada fila es un modelo con sus datos.
 
 Instalación
 ------------
@@ -31,120 +31,109 @@ Para Laravel 6+:
 
 ```php
 {{ gridview()->widget([
-	'dataProvider' => [
-		[
-			'nombre' => 'Andres',
-			'fecha' => 1706200888,
-			'email' => 'andres@localhost.com'
-		],
-		[
-			'nombre' => 'Jorge',
-			'fecha' => 1706200890,
-			'email' => 'jorge@localhost.com'
-		],
-		[
-			'nombre' => 'Nilson',
-			'fecha' => 1706200990,
-			'email' => 'nilson@localhost.com'
-		],
-		[
-			'nombre' => 'Juan',
-			'fecha' => 1706201000,
-			'email' => 'juan@localhost.com'
-		],
-		[
-			'nombre' => 'Pedro',
-			'fecha' => 1706201010,
-			'email' => 'pedro@localhost.com'
-		],
-		[
-			'nombre' => 'Felipe',
-			'fecha' => 1706201020,
-			'email' => 'felipe@localhost.com'
-		],
-		[
-			'nombre' => 'Fredy',
-			'fecha' => 1706201030,
-			'email' => 'fredy@localhost.com'
-		]
-	],
-	'tableOptions' => [
-	' id' => 'datatable',
-	    'class' => 'dataTable'
-	],
-	'columns' => [
-		[
-			'attribute' => 'nombre',
-			'headerOptions' => ['data-sortable' => 'true']
-		],
-		[
-			'attribute' => 'fecha',
-			'format' => ['datetime', 'd/m/Y H:i:s']
-		],
-		'email:email:Email',
-		[
-			'class' => '\neoacevedo\gridview\Column\ActionColumn',
-			'header' => 'Actions'
-		]
-	]
+ 'dataProvider' => $dataProvider,
+ 'tableOptions' => [
+     'class' => 'table table-bordered'
+ ],
+ 'columns' => [
+  'nombre',
+  [
+   'attribute' => 'fecha',
+   'format' => ['datetime', 'd/m/Y H:i:s']
+  ],
+  'email:email:Email',
+  [
+   'class' => '\neoacevedo\gridview\Column\ActionColumn',
+   'header' => 'Actions'
+  ]
+ ]
 ]) }}
 ```
 
 Para Laravel 7+, se puede de la forma anterior, o como componente:
 
 ```php
-<x-package-gridview id="table" class="dataTable"
-	:dataProvider="[
-		[
-			'nombre' => 'Andres',
-			'fecha' => 1706200888,
-			'email' => 'andres@localhost.com'
-		],
-		[
-			'nombre' => 'Jorge',
-			'fecha' => 1706200890,
-			'email' => 'jorge@localhost.com'
-		],
-		[
-			'nombre' => 'Nilson',
-			'fecha' => 1706200990,
-			'email' => 'nilson@localhost.com'
-		],
-		[
-			'nombre' => 'Juan',
-			'fecha' => 1706201000,
-			'email' => 'juan@localhost.com'
-		],
-		[
-			'nombre' => 'Pedro',
-			'fecha' => 1706201010,
-			'email' => 'pedro@localhost.com'
-		],
-		[
-			'nombre' => 'Felipe',
-			'fecha' => 1706201020,
-			'email' => 'felipe@localhost.com'
-		],
-		[
-			'nombre' => 'Fredy',
-			'fecha' => 1706201030,
-			'email' => 'fredy@localhost.com'
-		],
-	]" :columns="[  
-			[
-				'attribute' => 'nombre',
-				'headerOptions' => ['data-sortable' => 'true']
-			],
-			'fecha:datetime', // Formato corto del ejemplo anterior de la columna de fecha. 
-			'email:email:Email',
-			[
-				'class' => '\neoacevedo\gridview\Column\ActionColumn',
-				'header' => 'Actions'
-			]  
-	]" />
+<x-package-gridview id="table" class="table table-bordered"
+ :dataProvider="$dataProvider" :columns="[  
+   'nombre',
+   'fecha:datetime', // Formato corto del ejemplo anterior de la columna de fecha. 
+   'email:email:Email',
+   [
+    'class' => '\neoacevedo\gridview\Column\ActionColumn',
+    'header' => 'Actions'
+   ]  
+ ]" />
 ```
 
-Para la propiedad `dataProvider` puede pasarse un array o una colección. Para esta última desde el controlador puede pasarla desde la base de datos.
+Desde el controlador (para un array anidado):
+
+```php
+$data = [
+            [
+                'nombre' => 'Andres',
+                'fecha' => 1706200888,
+                'email' => 'andres@localhost.com',
+            ],
+            [
+                'nombre' => 'Jorge',
+                'fecha' => 1706200890,
+                'email' => 'jorge@localhost.com',
+            ],
+            [
+                'nombre' => 'Nelson',
+                'fecha' => 1706200990,
+                'email' => 'nilson@localhost.com',
+            ],
+            [
+                'nombre' => 'Juan',
+                'fecha' => 1706201000,
+                'email' => 'juan@localhost.com',
+            ],
+            [
+                'nombre' => 'Pedro',
+                'fecha' => 1706201010,
+                'email' => 'pedro@localhost.com',
+            ],
+            [
+                'nombre' => 'Felipe',
+                'fecha' => 1706201020,
+                'email' => 'felipe@localhost.com',
+            ],
+            [
+                'nombre' => 'Fredy',
+                'fecha' => 1706201030,
+                'email' => 'fredy@localhost.com',
+            ],
+            [
+                'nombre' => 'Richard',
+                'fecha' => 1706201040,
+                'email' => 'richard@localhost.com',
+            ],
+        ];
+
+        Collection::macro('paginate', function ($perPage, $total = null, $page = null, $pageName = 'page') {
+            $page = $page ?: LengthAwarePaginator::resolveCurrentPage($pageName);
+
+            return new LengthAwarePaginator($this->forPage($page, $perPage), $total ?: $this->count(), $perPage, $page, [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => $pageName,
+            ]);
+        });
+
+        $dataProvider = collect($data)->paginate(5);
+```
+
+O con un modelo de datos:
+
+```php
+$dataProvider = CollectionDm::paginate(5);
+```
+
+Luego enviar el dataProvider a la vista:
+
+```php
+return response()->view('index', compact('dataProvider'));
+```
 
 En el array de columnas, puede especificar la clase que se encargará de renderizar el contenido de toda la columna a través de la propiedad `class`. Las clases de columna que soporta GridView son:
 
@@ -157,91 +146,130 @@ En el array de columnas, puede especificar la clase que se encargará de renderi
 Con cualquiera de las dos opciones, se obtendrá una tabla como la siguiente:
 
 ```html
-<table data-toggle="table" data-pagination="true" id="bootstrap-table" class="table table-bordered table-hover">
-
+<div class="summary">Showing <b>1-5</b> of <b>13</b>.</div>
+<table class="table table-bordered">
     <thead>
         <tr>
-            <th data-field="0">
-                <div class="th-inner "><input type="checkbox" name="selection_all" class="select-on-check-all"></div>
-                <div class="fht-cell"></div>
-            </th>
-            <th data-field="1">
-                <div class="th-inner sortable both">Nombre</div>
-                <div class="fht-cell"></div>
-            </th>
-            <th data-field="2">
-                <div class="th-inner ">Fecha</div>
-                <div class="fht-cell"></div>
-            </th>
-            <th data-field="3">
-                <div class="th-inner ">Email</div>
-                <div class="fht-cell"></div>
-            </th>
-            <th class="text-center" data-field="4">
-                <div class="th-inner ">Actions</div>
-                <div class="fht-cell"></div>
-            </th>
+            <th>Descripción</th>
+            <th>Estado predefinido</th>
+            <th>Retraso</th>
+            <th>Cargo x Día</th>
+            <th>&nbsp;</th>
         </tr>
     </thead>
     <tbody>
-        <tr data-index="0" data-key="0">
-            <td><input type="checkbox" value="0" class="form-check-input" name="selection[]"></td>
-            <td>Andres</td>
-            <td>2024-01-25 16:41:28</td>
-            <td><a href="mailto:andres@localhost.com">andres@localhost.com</a></td>
-            <td class="text-center"><a href="http://localhost:8090/controller/view?id=0" title="messages.view"
-                    aria-label="messages.view"><svg aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:1.125em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512">
-                        <path fill="currentColor"
-                            d="M573 241C518 136 411 64 288 64S58 136 3 241a32 32 0 000 30c55 105 162 177 285 177s230-72 285-177a32 32 0 000-30zM288 400a144 144 0 11144-144 144 144 0 01-144 144zm0-240a95 95 0 00-25 4 48 48 0 01-67 67 96 96 0 1092-71z">
-                        </path>
-                    </svg></a> <a href="http://localhost:8090/controller/edit?id=0" title="messages.edit"
-                    aria-label="messages.edit"><svg aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:1em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                        <path fill="currentColor"
-                            d="M498 142l-46 46c-5 5-13 5-17 0L324 77c-5-5-5-12 0-17l46-46c19-19 49-19 68 0l60 60c19 19 19 49 0 68zm-214-42L22 362 0 484c-3 16 12 30 28 28l122-22 262-262c5-5 5-13 0-17L301 100c-4-5-12-5-17 0zM124 340c-5-6-5-14 0-20l154-154c6-5 14-5 20 0s5 14 0 20L144 340c-6 5-14 5-20 0zm-36 84h48v36l-64 12-32-31 12-65h36v48z">
-                        </path>
-                    </svg></a> <a href="http://localhost:8090/controller/delete?id=0" title="messages.delete"
-                    aria-label="messages.delete" data-confirm="messages.delete_confirm" data-method="post"><svg
-                        aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:.875em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                        <path fill="currentColor"
-                            d="M32 464a48 48 0 0048 48h288a48 48 0 0048-48V128H32zm272-256a16 16 0 0132 0v224a16 16 0 01-32 0zm-96 0a16 16 0 0132 0v224a16 16 0 01-32 0zm-96 0a16 16 0 0132 0v224a16 16 0 01-32 0zM432 32H312l-9-19a24 24 0 00-22-13H167a24 24 0 00-22 13l-9 19H16A16 16 0 000 48v32a16 16 0 0016 16h416a16 16 0 0016-16V48a16 16 0 00-16-16z">
-                        </path>
-                    </svg></a></td>
+        <tr data-key="0">
+            <td>1</td>
+            <td>Ficción para adultos</td>
+            <td>No</td>
+            <td>21</td>
+            <td>$&nbsp;0.05</td>
+            <td><a href="http://localhost:8090/site/class-delete/0"><span class="bi bi-trash"></span></a></td>
         </tr>
-        <tr data-index="1" data-key="1">
+        <tr data-key="1">
             <td><input type="checkbox" value="1" class="form-check-input" name="selection[]"></td>
-            <td>Jorge</td>
-            <td>2024-01-25 16:41:30</td>
-            <td><a href="mailto:jorge@localhost.com">jorge@localhost.com</a></td>
-            <td class="text-center"><a href="http://localhost:8090/controller/view?id=1" title="messages.view"
-                    aria-label="messages.view"><svg aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:1.125em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512">
-                        <path fill="currentColor"
-                            d="M573 241C518 136 411 64 288 64S58 136 3 241a32 32 0 000 30c55 105 162 177 285 177s230-72 285-177a32 32 0 000-30zM288 400a144 144 0 11144-144 144 144 0 01-144 144zm0-240a95 95 0 00-25 4 48 48 0 01-67 67 96 96 0 1092-71z">
-                        </path>
-                    </svg></a> <a href="http://localhost:8090/controller/edit?id=1" title="messages.edit"
-                    aria-label="messages.edit"><svg aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:1em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                        <path fill="currentColor"
-                            d="M498 142l-46 46c-5 5-13 5-17 0L324 77c-5-5-5-12 0-17l46-46c19-19 49-19 68 0l60 60c19 19 19 49 0 68zm-214-42L22 362 0 484c-3 16 12 30 28 28l122-22 262-262c5-5 5-13 0-17L301 100c-4-5-12-5-17 0zM124 340c-5-6-5-14 0-20l154-154c6-5 14-5 20 0s5 14 0 20L144 340c-6 5-14 5-20 0zm-36 84h48v36l-64 12-32-31 12-65h36v48z">
-                        </path>
-                    </svg></a> <a href="http://localhost:8090/controller/delete?id=1" title="messages.delete"
-                    aria-label="messages.delete" data-confirm="messages.delete_confirm" data-method="post"><svg
-                        aria-hidden="true"
-                        style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:.875em"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                        <path fill="currentColor"
-                            d="M32 464a48 48 0 0048 48h288a48 48 0 0048-48V128H32zm272-256a16 16 0 0132 0v224a16 16 0 01-32 0zm-96 0a16 16 0 0132 0v224a16 16 0 01-32 0zm-96 0a16 16 0 0132 0v224a16 16 0 01-32 0zM432 32H312l-9-19a24 24 0 00-22-13H167a24 24 0 00-22 13l-9 19H16A16 16 0 000 48v32a16 16 0 0016 16h416a16 16 0 0016-16V48a16 16 0 00-16-16z">
-                        </path>
-                    </svg></a></td>
+            <td>2</td>
+            <td>No ficción para adultos</td>
+            <td>Sí</td>
+            <td>21</td>
+            <td>$&nbsp;0.05</td>
+            <td><a href="http://localhost:8090/site/class-delete/1"><span class="bi bi-trash"></span></a></td>
+        </tr>
+        <tr data-key="2">
+            <td><input type="checkbox" value="2" class="form-check-input" name="selection[]"></td>
+            <td>3</td>
+            <td>Casetes</td>
+            <td>No</td>
+            <td>7</td>
+            <td>$&nbsp;0.05</td>
+            <td><a href="http://localhost:8090/site/class-delete/2"><span class="bi bi-trash"></span></a></td>
+        </tr>
+        <tr data-key="3">
+            <td><input type="checkbox" value="3" class="form-check-input" name="selection[]"></td>
+            <td>4</td>
+            <td>Discos compactos</td>
+            <td>No</td>
+            <td>7</td>
+            <td>$&nbsp;0.15</td>
+            <td><a href="http://localhost:8090/site/class-delete/3"><span class="bi bi-trash"></span></a></td>
+        </tr>
+        <tr data-key="4">
+            <td><input type="checkbox" value="4" class="form-check-input" name="selection[]"></td>
+            <td>5</td>
+            <td>Software de Computadora</td>
+            <td>No</td>
+            <td>7</td>
+            <td>$&nbsp;0.15</td>
+            <td><a href="http://localhost:8090/site/class-delete/4"><span class="bi bi-trash"></span></a></td>
         </tr>
     </tbody>
 </table>
+<nav role="navigation" aria-label="Pagination Navigation" class="flex items-center justify-between">
+    <div class="flex justify-between flex-1 sm:hidden">
+        <span
+            class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 cursor-default leading-5 rounded-md">
+            « Previous
+        </span>
+
+        <a href="http://localhost:8090/site/component?page=2"
+            class="relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 leading-5 rounded-md hover:text-gray-500 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+            Next »
+        </a>
+    </div>
+
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-gray-700 leading-5">
+                Showing
+                <span class="font-medium">1</span>
+                to
+                <span class="font-medium">5</span>
+                of
+                <span class="font-medium">13</span>
+                results
+            </p>
+        </div>
+
+        <div>
+            <span class="relative z-0 inline-flex shadow-sm rounded-md">
+                <span aria-disabled="true" aria-label="&amp;laquo; Previous">
+                    <span
+                        class="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 cursor-default rounded-l-md leading-5"
+                        aria-hidden="true">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                    </span>
+                </span>
+                <span aria-current="page">
+                    <span
+                        class="relative inline-flex items-center px-4 py-2 -ml-px text-sm font-medium text-gray-500 bg-white border border-gray-300 cursor-default leading-5">1</span>
+                </span>
+                <a href="http://localhost:8090/site/component?page=2"
+                    class="relative inline-flex items-center px-4 py-2 -ml-px text-sm font-medium text-gray-700 bg-white border border-gray-300 leading-5 hover:text-gray-500 focus:z-10 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150"
+                    aria-label="Go to page 2">
+                    2
+                </a>
+                <a href="http://localhost:8090/site/component?page=3"
+                    class="relative inline-flex items-center px-4 py-2 -ml-px text-sm font-medium text-gray-700 bg-white border border-gray-300 leading-5 hover:text-gray-500 focus:z-10 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150"
+                    aria-label="Go to page 3">
+                    3
+                </a>
+
+
+                <a href="http://localhost:8090/site/component?page=2" rel="next"
+                    class="relative inline-flex items-center px-2 py-2 -ml-px text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md leading-5 hover:text-gray-400 focus:z-10 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-500 transition ease-in-out duration-150"
+                    aria-label="Next &amp;raquo;">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </a>
+            </span>
+        </div>
+    </div>
+</nav>
 ```

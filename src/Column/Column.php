@@ -24,15 +24,25 @@ use Illuminate\Support\HtmlString;
 use neoacevedo\gridview\Support\Html;
 
 /**
- * Column es la clase base de todas las clases de columnas de [[GridView]] o [[GridViewComponent]].
+ * Column is the base class of all GridView [1] or GridViewComponent [2] column classes.
+ * 
+ * @see \neoacevedo\gridview\GridView [1]
+ * @see \neoacevedo\gridview\View\Components\GridViewComponent [2]
  */
 class Column
 {
-    /** @var Callable This is a callable that will be used to generate the content of each cell. */
+    /** @var callable This is a callable that will be used to generate the content of each cell. */
     public $content;
 
     /** @var array|Closure The HTML attributes for the data cell tag. */
     public $contentOptions = [];
+
+    /**
+     * The HTML attributes for the filter cell tag.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public $filterOptions = [];
 
     /** @var string|null The header cell content. */
     public $header;
@@ -101,6 +111,16 @@ class Column
     }
 
     /**
+     * Renders the filter cell.
+     * @return HtmlString
+     */
+    public function renderFilterCell()
+    {
+        $options = Html::renderTagAttributes($this->filterOptions);
+        return str("<td $options>" . $this->renderFilterCellContent() . "</td>")->toHtmlString();
+    }
+
+    /**
      * Returns header cell label.
      * This method may be overridden to customize the label of the header cell.
      * @return string
@@ -122,6 +142,16 @@ class Column
         if ($this->content !== null) {
             return call_user_func($this->content, $model, $key, $index, $this);
         }
+        return $this->grid->emptyCell;
+    }
+
+    /**
+     * Renders the filter cell content.
+     * The default implementation simply renders a space. This method may be overridden to customize the rendering of the filter cell (if any).
+     * @return string
+     */
+    protected function renderFilterCellContent()
+    {
         return $this->grid->emptyCell;
     }
 

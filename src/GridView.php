@@ -21,6 +21,7 @@ namespace neoacevedo\gridview;
 
 use Closure;
 use Exception;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
@@ -112,7 +113,7 @@ class GridView
 
     /**
      * The data provider for the view.
-     * @var array|\Illuminate\Database\Eloquent\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @var \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public $dataProvider = null;
 
@@ -138,7 +139,7 @@ class GridView
      * The HTML attributes for the emptyText of the list.
      * @var array
      */
-    public array $emptyTextOptions = [
+    public $emptyTextOptions = [
         'class' => 'empty',
     ];
 
@@ -146,10 +147,46 @@ class GridView
      * The HTML attributes for the table header row.
      * @var array
      */
-    public array $headerRowOptions = [];
+    public $headerRowOptions = [];
+
+    /**
+     * The formatter used to format model attribute values into displayable texts.
+     * @var array|null
+     */
+    public $formatter;
+
+    /**
+     * The layout that determines how different sections of the grid view should be organized. The following tokens will be replaced with the corresponding section contents:
+     * - `{summary}`: the summary section.
+     * - `{errors}`: the filter model error summary.
+     * - `{items}`: the list items.
+     * - `{sorter}`: the sorter.
+     * - `{pager}`: the pager.
+     *  
+     * @var string
+     */
+    public $layout = "{summary}\n{items}\n{pager}";
 
     /** @var array|Closure */
     public $rowOptions = [];
+
+    /**
+     * Whether to show the header section of the grid table.
+     * @var boolean
+     */
+    public $showHeader = true;
+
+    /**
+     * The HTML content to be displayed as the summary of the grid view.
+     * @var string
+     */
+    public $summary;
+
+    /**
+     * The HTML attributes for the summary of the grid view.
+     * @var array
+     */
+    public $summaryOptions = ['class' => 'summary'];
 
     /** @var array */
     public $tableOptions = ['class' => 'table table-striped table-bordered'];
@@ -177,73 +214,125 @@ class GridView
         $this->columns = $config['columns'];
 
         if (isset($config['tableOptions'])) {
-            $tableOptions = implode(
-                ' ',
-                array_map(
-                    function ($v, $k) {
-                        return sprintf("%s=\"%s\"", $k, $v);
-                    },
-                    $config['tableOptions'],
-                    array_keys($config['tableOptions'])
-                )
-            );
+            $this->tableOptions = $config['tableOptions'];
         }
 
         $this->initColumns();
 
-        $columnGroup = $this->renderColumnGroup();
-        $tableHeader = $this->renderTableHeader();
-        $tableBody = $this->renderTableBody();
+        $summary = $tableOptions = $content = $pager = '';
+        if (count($this->dataProvider) > 0) {
+            preg_match_all('/{\\w+}/', $this->layout, $matches);
 
-        return view("gridview::gridview", [
+            for ($index = 0; $index < count($matches[0]); $index++) {
+                if ($matches[0][$index] === '{summary}') {
+                    $summary = $this->renderSummary();
+                } elseif ($matches[0][$index] === '{pager}') {
+                    $pager = $this->renderPager();
+                } else {
+                    $content = $this->renderSection($matches[0][$index]);
+                }
+            }
+            // $content = preg_replace_callback('/{\\w+}/', function ($matches) use ($summary) {
+            //     $content = $this->renderSection($matches[0]);
+            //     return $content === false ? $matches[0] : $content;
+            // }, $this->layout);
+        } else {
+            $content = $this->renderEmpty();
+        }
+
+        $tableOptions = Html::renderTagAttributes($this->tableOptions);
+
+        return view('gridview::table', [
+            'summary' => $summary,
             'tableOptions' => $tableOptions,
-            'tableHeader' => $tableHeader,
-            'columnGroup' => $columnGroup,
-            'tableBody' => $tableBody
+            'content' => $content,
+            'pager' => $pager
         ]);
     }
 
     /**
      * Returns the data models.
-     * @return array|\Illuminate\Database\Eloquent\Collection
+     * @return array
      */
     public function getModels()
     {
-        if (is_array($this->dataProvider)) {
-            return $this->dataProvider;
-        } elseif ($this->dataProvider instanceof Collection) {
-            return $this->dataProvider->toArray();
-        } else {
-            return $this->dataProvider->getCollection()->toArray();
-        }
+        return $this->dataProvider->items();
     }
 
     /**
      * Renders the HTML content indicating that the list view has no data.
-     * @return HtmlString
+     * @return string|HtmlString
      */
     public function renderEmpty()
     {
         if ($this->emptyText === false) {
             return '';
         }
-        $options = implode(
-            ' ',
-            array_map(
-                function ($v, $k) {
-                    return sprintf("%s=\"%s\"", $k, $v);
-                },
-                $this->emptyTextOptions,
-                array_keys($this->emptyTextOptions)
-            )
-        );
 
-        $tag = Arr::forget($this->emptyTextOptions, 'tag');
-        if (!$tag) {
+        $options = Html::renderTagAttributes($this->emptyTextOptions);
+
+        Arr::forget($this->emptyTextOptions, 'tag');
+        if (!$this->emptyTextOptions['tag']) {
             $tag = "div";
         }
 
         return new HtmlString("<$tag $options>{$this->emptyText}</$tag>");
+    }
+
+
+    /**
+     * Renders dtje data ,pdeñs fpr tje grod voew-
+     * @return string The HTML code for the table.
+     */
+    public function renderItems(): string
+    {
+        // $caption = $this->renderCaption();
+        $columnGroup = $this->renderColumnGroup();
+        $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
+        $tableBody = $this->renderTableBody();
+        // $tableFooter = false;
+        // $tableFooterAfterBody = false;
+        // if ($this->showFooter) {
+        //     if ($this->placeFooterAfterBody) {
+        //         $tableFooterAfterBody = $this->renderTableFooter();
+        //     } else {
+        //         $tableFooter = $this->renderTableFooter();
+        //     }
+        // }
+        $content = array_filter([
+            // $caption,
+            $columnGroup,
+            $tableHeader,
+            // $tableFooter,
+            $tableBody,
+            // $tableFooterAfterBody,
+        ]);
+
+        return implode("\n", $content);
+    }
+
+    /**
+     * Renders the pager.
+     * @return string The rendering result.
+     */
+    public function renderPager(): string
+    {
+        $pagination = $this->dataProvider->hasPages();
+
+        if ($pagination === false) {
+            return '';
+        }
+
+        return $this->dataProvider->links();
+    }
+
+    /**
+     * Renders validator error of filter model.
+     * @return string
+     */
+    public function renderErrors()
+    {
+        return '';
     }
 
     /**
@@ -294,7 +383,15 @@ class GridView
     public function renderTableBody()
     {
         $models = array_values($this->getModels());
-        $keys = is_array($this->dataProvider) ? array_keys($this->dataProvider) : $this->dataProvider->keys();
+
+        if (is_array($this->dataProvider)) {
+            $keys = array_keys($this->dataProvider);
+        } elseif ($this->dataProvider instanceof Collection) {
+            $keys = $this->dataProvider->keys();
+        } else {
+            $keys = array_keys($this->dataProvider->items());
+        }
+
         $rows = [];
 
         foreach ($models as $index => $model) {
@@ -333,6 +430,68 @@ class GridView
         $options = Html::renderTagAttributes($options);
 
         return new HtmlString("<tr $options>" . implode("", $cells) . '</tr>');
+    }
+
+    /**
+     * Renders a section of the specified name.
+     * 
+     * If the named section is not supported, false will be returned.
+     * @param string $name The section name, e.g., {summary}, {items}.
+     * @return string|boolean The rendering result of the section, or false if the named section is not supported.
+     */
+    public function renderSection(string $name): mixed
+    {
+        switch ($name) {
+            case '{summary}':
+                return $this->renderSummary();
+            case '{items}':
+                return $this->renderItems();
+            case '{pager}':
+                return $this->renderPager();
+            // case '{sorter}':
+            //     return $this->renderSorter();
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Renders the summary text
+     * @return string
+     */
+    public function renderSummary()
+    {
+        $count = $this->dataProvider->count();
+        if ($count <= 0) {
+            return '';
+        }
+        $summaryOptions = $this->summaryOptions;
+        Arr::forget($summaryOptions, 'tag');
+        $htmlOptions = Html::renderTagAttributes($summaryOptions);
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $pagination */
+        if ($this->dataProvider->hasPages() === true) {
+            $totalCount = $this->dataProvider->total();
+            $begin = ($this->dataProvider->currentPage() - 1) * $this->dataProvider->perPage() + 1;
+            $end = $begin + $count - 1;
+
+            if ($begin > $end) {
+                $begin = $end;
+            }
+
+            if (($summaryContent = $this->summary) === null) {
+                return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+            }
+        } else {
+            $begin = 1;
+            $end = $totalCount = $count;
+            if (($summaryContent = $this->summary) === null) {
+                return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+            }
+        }
+        if ($summaryContent === '') {
+            return '';
+        }
+        return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
     }
 
     /**
