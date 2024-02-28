@@ -48,6 +48,10 @@ use neoacevedo\gridview\Support\Html;
  */
 class GridView
 {
+    const FILTER_POS_HEADER = 'header';
+    const FILTER_POS_FOOTER = 'footer';
+    const FILTER_POS_BODY = 'body';
+
     /**
      * @var string the caption of the grid table
      * @see captionOptions
@@ -124,7 +128,11 @@ class GridView
     public $dataColumnClass = null;
 
     /**
-     * The HTML display when the content of a cell is empty.
+     * The HTML display when the content of a cell is empty. This property is used to render cells taht have not defined 
+     * content, e.g. empty footer or filter cells.
+     * 
+     * Note that this is not use by the {@see \neoacevedo\gridview\Column\DataColumn} if a data item is null. In that case a 
+     * null value will be used to indicate an ampty data value.
      * @var string
      */
     public string $emptyCell = '&nbsp;';
@@ -150,6 +158,30 @@ class GridView
     public $headerRowOptions = [];
 
     /**
+     * Whether the filters should be displayed in the grid view. Valid values include:
+     * - @see GridViewComponent::FILTER_POS_HEADER: the filters will be displayed on top of each column's header cell.
+     * - @see GridViewComponent::FILTER_POS_BODY: the filters will be displayed right below each column's header cell.
+     * - @see GridViewComponent::FILTER_POS_FOOTER: the filters will be displayed below each column's footer cell.
+     * @var string
+     */
+    public string $filterPosition = self::FILTER_POS_BODY;
+
+    /**
+     * The HTML attributes for the filter row element.
+     * 
+     * See also {@link neoacevedo\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public array $filterRowOptions = ['class' => 'filters',];
+
+    /**
+     * The HTML attributes for the table footer row.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public array $footerRowOptions = [];
+
+    /**
      * The formatter used to format model attribute values into displayable texts.
      * @var array|null
      */
@@ -169,6 +201,12 @@ class GridView
 
     /** @var array|Closure */
     public $rowOptions = [];
+
+    /**
+     * Whether to show the footer section of the grid table.
+     * @var bool
+     */
+    public bool $showFooter = false;
 
     /**
      * Whether to show the header section of the grid table.
@@ -192,30 +230,38 @@ class GridView
     public $tableOptions = ['class' => 'table table-striped table-bordered'];
 
     /**
-     * Get the view / contents that represent the [[GridView]].
+     * Get the view / contents that represent the {@see GridView}.
      * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
     public function widget($config = [])
     {
-        if (isset($config['dataProvider'])) {
-            $this->dataProvider = $config['dataProvider'];
-        }
+        $this->dataProvider = $config['dataProvider'];
 
-        $this->emptyText = $config['emptyText'] ?? null;
+        $this->emptyText = @$config['emptyText'];
 
         if ($this->dataProvider === null) {
             throw new Exception('The "dataProvider" property must be set.', 500);
         }
 
-        if ($this->emptyText === null) {
-            $this->emptyText = 'No results found.';
-        }
+        $this->emptyText = $config['emptyText'] ?? 'No results found.';
 
         $this->columns = $config['columns'];
 
-        if (isset($config['tableOptions'])) {
-            $this->tableOptions = $config['tableOptions'];
-        }
+        $this->formatter = @$config['formatter'];
+
+        $this->filterPosition = $config['filterPosition'] ?? $this->filterPosition;
+
+        $this->filterRowOptions = $config['filterRowOptions'] ?? $this->filterRowOptions;
+
+        $this->footerRowOptions = $config['footerRowOptions'] ?? $this->footerRowOptions;
+
+        $this->rowOptions = $config['rowOptions'] ?? $this->rowOptions;
+
+        $this->showHeader = $config['showHeader'] ?? $this->showHeader;
+
+        $this->showFooter = $config['showFooter'] ?? $this->showFooter;
+
+        $this->tableOptions = $config['tableOptions'] ?? $this->tableOptions;
 
         $this->initColumns();
 
@@ -279,6 +325,25 @@ class GridView
         return new HtmlString("<$tag $options>{$this->emptyText}</$tag>");
     }
 
+    /**
+     * Renders the filter.
+     * @return HtmlString
+     */
+    public function renderFilters()
+    {
+        $cells = [];
+        /** @var mixed $column */
+        foreach ($this->columns as $column) {
+            $cells[] = $column->renderFilterCell();
+        }
+
+        $options = Html::renderTagAttributes($this->filterRowOptions);
+
+        $content = "<tr $options>" . implode('', $cells) . "</tr>";
+
+        return new HtmlString("<thead>\n" . $content . "\n</thead>");
+    }
+
 
     /**
      * Renders dtje data ,pdeñs fpr tje grod voew-
@@ -290,21 +355,16 @@ class GridView
         $columnGroup = $this->renderColumnGroup();
         $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
         $tableBody = $this->renderTableBody();
-        // $tableFooter = false;
-        // $tableFooterAfterBody = false;
-        // if ($this->showFooter) {
-        //     if ($this->placeFooterAfterBody) {
-        //         $tableFooterAfterBody = $this->renderTableFooter();
-        //     } else {
-        //         $tableFooter = $this->renderTableFooter();
-        //     }
-        // }
+        $tableFooter = false;
+        if ($this->showFooter) {
+            $tableFooter = $this->renderTableFooter();
+        }
         $content = array_filter([
             // $caption,
             $columnGroup,
             $tableHeader,
-            // $tableFooter,
             $tableBody,
+            $tableFooter,
             // $tableFooterAfterBody,
         ]);
 
@@ -358,6 +418,25 @@ class GridView
     }
 
     /**
+     * Renders the table footer.
+     * @return HtmlString
+     */
+    public function renderTableFooter()
+    {
+        $cells = [];
+        foreach ($this->columns as $column) {
+            /* @var $column Column */
+            $cells[] = $column->renderFooterCell();
+        }
+        $options = Html::renderTagAttributes($this->footerRowOptions);
+        $content = "<tr $options>" . implode('', $cells) . "</tr>";
+        if ($this->filterPosition === self::FILTER_POS_FOOTER) {
+            $content .= $this->renderFilters();
+        }
+        return str("<tfoot>\n" . $content . "\n</tfoot>")->toHtmlString();
+    }
+
+    /**
      * Renders the table header.
      * @return HtmlString
      */
@@ -378,7 +457,7 @@ class GridView
 
     /**
      * Renders the table body.
-     * @return string
+     * @return HtmlString
      */
     public function renderTableBody()
     {
@@ -401,9 +480,9 @@ class GridView
         }
         if (empty($rows) && $this->emptyText !== false) {
             $colspan = count($this->columns);
-            return "<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>";
+            return str("<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>")->toHtmlString();
         }
-        return "<tbody>\n" . implode("\n", $rows) . "\n</tbody>";
+        return str("<tbody>\n" . implode("\n", $rows) . "\n</tbody>")->toHtmlString();
     }
 
     /**
@@ -494,8 +573,10 @@ class GridView
         return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
     }
 
+    #region Protected
+
     /**
-     * Creates a [[DataColumn]] object based on a string in the format of "attribute" or "attribute:label".
+     * Creates a \neoacevedo\gridview\Column\DataColumn object based on a string in the format of "attribute" or "attribute:label".
      * @param string $text the column specification string
      * @return DataColumn the column instance
      * @throws Exception if the column specification is invalid
@@ -515,8 +596,8 @@ class GridView
     }
 
     /**
-     * This function tries to guess the columns to show from the given data
-     * if [[columns]] are not explicitly specified.
+     * This function tries to guess the columns to show from the given data if $columns are not explicitly specified.
+     * @return void
      */
     protected function guessColumns()
     {
@@ -559,4 +640,6 @@ class GridView
             $this->columns[$i] = $column;
         }
     }
+
+    #endregion
 }

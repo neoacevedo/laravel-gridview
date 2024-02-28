@@ -96,15 +96,15 @@ class GridViewAsset
      * @return HtmlString
      * @static
      */
-    public static function init($tableId)
-    {
-        $js = <<<HTML
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {                   
-                    
-                });
-            </script>
-        HTML;
-        return new HtmlString($js);
-    }
+    // public static function init($tableId)
+    // {
+    //     $js = <<<HTML
+    //         <script>
+    //             document.addEventListener('DOMContentLoaded', function () {                   
+
+    //             });
+    //         </script>
+    //     HTML;
+    //     return new HtmlString($js);
+    // }
 }

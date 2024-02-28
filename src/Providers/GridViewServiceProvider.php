@@ -19,6 +19,7 @@
 
 namespace neoacevedo\gridview\Providers;
 
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -40,6 +41,8 @@ class GridViewServiceProvider extends ServiceProvider
         if (substr(app()->version(), 0, 1) >= 7) {
             Blade::component('package-gridview', GridViewComponent::class);
         }
+
+        Paginator::useBootstrap();
 
         $this->loadViewsFrom(dirname(__DIR__) . '/resources/views', 'gridview');
 

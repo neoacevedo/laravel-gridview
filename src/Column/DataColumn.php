@@ -197,7 +197,7 @@ class DataColumn extends Column
                         $dataCellValue = $value->toDateTimeString();
                     } else {
                         if ($format == 'default') {
-                            $dataCellValue = Carbon::createFromTimestamp($value, config('timezone'))->toDateTimeString();
+                            $dataCellValue = Carbon::createFromTimestamp($value, config('app.timezone'))->toDateTimeString();
                         } else {
                             $value = Carbon::createFromTimestamp($value)->toDate();
                             $dataCellValue = $value->format($format);
@@ -213,7 +213,7 @@ class DataColumn extends Column
                         $dataCellValue = $value->toDateString();
                     } else {
                         if ($format == 'default') {
-                            $value = Carbon::createFromTimestamp($value, config('timezone'))->toDate();
+                            $value = Carbon::createFromTimestamp($value, config('app.timezone'))->toDate();
                             $dataCellValue = $value->format('d M y');
                         } else {
                             $value = Carbon::createFromTimestamp($value)->toDate();
@@ -228,10 +228,11 @@ class DataColumn extends Column
                 case 'currency':
                     $value = $this->getDataCellValue($model, $key, $index);
                     if (substr(app()->version(), 0, 1) < 10) {
-                        $formatter = new \NumberFormatter(config('locale'), \NumberFormatter::CURRENCY);
-                        $dataCellValue = $formatter->formatCurrency($value, 'USD');
+                        $formatter = new \NumberFormatter(config('app.locale'), \NumberFormatter::CURRENCY);
+
+                        $dataCellValue = $formatter->formatCurrency($value, config('app.currency_code', 'USD'));
                     } else {
-                        $dataCellValue = Number::curency($value, config('locale'));
+                        $dataCellValue = Number::curency($value, config('app.locale'));
                     }
                     break;
                 case 'html':
@@ -248,6 +249,9 @@ class DataColumn extends Column
         return parent::renderDataCellContent($model, $key, $index);
     }
 
+    /**
+     * @inheritDoc
+     */
     protected function renderFilterCellContent()
     {
         if (is_string($this->filter)) {

@@ -31,10 +31,18 @@ use neoacevedo\gridview\Support\Html;
  */
 class Column
 {
-    /** @var callable This is a callable that will be used to generate the content of each cell. */
+    /** 
+     * This is a callable that will be used to generate the content of each cell.
+     * The signature of the function should be the following: function ($model, $key, $index, $column) where $model, $key, and $index refer to the model, 
+     * key and index of the row currently being rendered and $column is a reference to the {@see Column} object.
+     * @var callable  
+     */
     public $content;
 
-    /** @var array|Closure The HTML attributes for the data cell tag. */
+    /** The HTML attributes for the data cell tag.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array|Closure
+     */
     public $contentOptions = [];
 
     /**
@@ -44,13 +52,34 @@ class Column
      */
     public $filterOptions = [];
 
+    /**
+     * The footer cell content. Note that it will not be HTML-encoded.
+     * @var string
+     */
+    public $footer;
+
+    /**
+     * The HTML attributes for the footer cell tag.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public $footerOptions = [];
+
     /** @var string|null The header cell content. */
     public $header;
 
-    /** @var array The HTML attributes for the header cell tag. */
+    /** 
+     * The HTML attributes for the header cell tag. 
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
     public array $headerOptions = [];
 
-    /** @var array The HTML attribute for the column group tag. */
+    /**
+     * The HTML attribute for the column group tag.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
     public $options = [];
 
     /** @var boolean Whether this column is visible. */
@@ -66,7 +95,9 @@ class Column
     {
         $this->options = $config['options'] ?? [];
 
-        $this->header = @$config['header'];
+        if (isset($config['header'])) {
+            $this->header = $config['header'];
+        }
 
         $this->headerOptions = $config['headerOptions'] ?? [];
 
@@ -84,7 +115,7 @@ class Column
      * Renders the data cell content.
      * @param mixed $model the data model
      * @param mixed $key the key associated with the data model
-     * @param int $index the zero-based index of the data model among the models array returned by [[GridView::dataProvider]].
+     * @param int $index the zero-based index of the data model among the models array returned by {@see \neoacevedo\gridview\GridView::$dataProvider}.
      * @return string the rendering result
      */
     public function renderDataCell($model, $key, $index)
@@ -121,6 +152,18 @@ class Column
     }
 
     /**
+     * Renders the footer cell.
+     * @return HtmlString
+     */
+    public function renderFooterCell()
+    {
+        $options = Html::renderTagAttributes($this->filterOptions);
+        return str("<td $options>" . $this->renderFilterCellContent() . "</td>")->toHtmlString();
+    }
+
+    #region Protected
+
+    /**
      * Returns header cell label.
      * This method may be overridden to customize the label of the header cell.
      * @return string
@@ -131,10 +174,21 @@ class Column
     }
 
     /**
+     * Renders the header cell content.
+     * The default implementation simply renders {@see Column::$header}.
+     * This method may be overridden to customize the rendering of the header cell.
+     * @return string the rendering result
+     */
+    protected function renderHeaderCellContent()
+    {
+        return $this->header !== null && trim($this->header) !== '' ? $this->header : $this->getHeaderCellLabel();
+    }
+
+    /**
      * Renders the data cell content.
      * @param mixed $model The data model
      * @param mixed $key The key associated with the data model
-     * @param int $index The zero-based index of the data model among the models array returned by  [[GridView::dataProvider]]
+     * @param int $index The zero-based index of the data model among the models array returned by {@see \neoacevedo\gridview\GridView::$dataProvider}.
      * @return string The rendering result
      */
     protected function renderDataCellContent($model, $key, $index)
@@ -156,13 +210,14 @@ class Column
     }
 
     /**
-     * Renders the header cell content.
-     * The default implementation simply renders [[header]].
-     * This method may be overridden to customize the rendering of the header cell.
-     * @return string the rendering result
+     * Renders the footer cell content.
+     * The default implementation simply renders {@see Column::$footer}. This method may be overridden to customize the rendering of the footer cell. 
+     * @return string
      */
-    protected function renderHeaderCellContent()
+    protected function renderFooterCellContent()
     {
-        return $this->header !== null && trim($this->header) !== '' ? $this->header : $this->getHeaderCellLabel();
+        return $this->footer !== null && trim($this->footer) !== '' ? $this->footer : $this->grid->emptyCell;
     }
+
+    #endregion
 }

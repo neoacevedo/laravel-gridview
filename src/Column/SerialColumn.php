@@ -43,6 +43,12 @@ class SerialColumn extends Column
      */
     protected function renderDataCellContent($model, $key, $index)
     {
+        if ($this->grid->dataProvider->hasPages()) {
+            $pageSize = $this->grid->dataProvider->perPage();
+            $offset = $pageSize < 1 ? 0 : ($this->grid->dataProvider->currentPage() - 1) * $pageSize;
+
+            return $offset + $index + 1;
+        }
         return $index + 1;
     }
 }
