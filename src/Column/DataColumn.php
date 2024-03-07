@@ -40,8 +40,38 @@ class DataColumn extends Column
      */
     public $filter;
 
-    /** @var string|null */
+    /**
+     * The atrribute name associated with this column. If not set, will have the same value as $attribute.
+     * @var string|null
+     */
+    public $filterAttribute;
+
+    /**
+     * The HTML attributes for the filter input fields. This property is used in combination with the $filter property.
+     * When {@see DataColumn::$filter} is not set or is an array, this property will be used to render the HTML attributes for the generated 
+     * filter input fields.
+     * 
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public array $filterInputOptions = [
+        'class' => 'form-control',
+        'id' => null,
+    ];
+
+    /** 
+     * Label to be displayed in the {@see DataColumn::$header} and also to be used as the sorting link label when sorting is enabled for this column.
+     * @var string|null
+     */
     public $label;
+
+    /**
+     * Whether to allow sorting by this column. 
+     * If true and {@see \neoacevedo\gridview\Column\DataColumn::$attribute} is found in the sort definition of {@see \neoacevedo\gridview\GridView::$dataProvider}, 
+     * then the header cell of this column will contain a link that may trigger the sorting when being clicked.
+     * @var bool
+     */
+    public $enableSorting = true;
 
     /**
      * Whether the header lable should be HTML-encoded.
@@ -53,11 +83,19 @@ class DataColumn extends Column
     public $value;
 
     /**
-     * @var string|array|Closure in which format should the value of each data model be displayed as (e.g. `"raw"`, `"text"`, `"html"`,
-     * `date`, `datetime`). Supported formats are determined by the [[GridView::formatter|formatter]] used by
-     * the [[GridView]]. Default format is "text" which will format the value as an HTML-encoded plain text.
+     * @var string|array|Closure In which format should the value of each data model be displayed as (e.g. `"raw"`, `"text"`, `"html"`,
+     * `date`, `datetime`). 
+     * Supported formats are determined by the {@see \neoacevedo\gridview\GridView::$formatter formatter} used by
+     * the {@see \neoacevedo\gridview\GridView}. Default format is "text" which will format the value as an HTML-encoded plain text.
      */
     public $format = 'text';
+
+    /**
+     * The HTML attributes for the link tag in the header cell when sorting is enabled for this column.
+     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @var array
+     */
+    public $sortLinkOptions = [];
 
     /**
      * Constructor.
@@ -72,9 +110,14 @@ class DataColumn extends Column
     public function __construct($config = [])
     {
         parent::__construct($config);
-        $this->attribute = $config['attribute'] ?? null;
+
+        if (isset($config['attribute'])) {
+            $this->attribute = $config['attribute'];
+        }
+
         $this->label = $config['label'] ?? null;
         $this->value = $config['value'] ?? null;
+        $this->filterAttribute = $config['filterAttribute'] ?? $this->attribute;
 
         if (isset($config['encodeLabel'])) {
             $this->encodeLabel = $config['encodeLabel'];
@@ -83,6 +126,26 @@ class DataColumn extends Column
         if (isset($config['format'])) {
             $this->format = $config['format'];
         }
+    }
+
+    /**
+     * Returns the data cell value.
+     * @param mixed $model the data model
+     * @param mixed $key the key associated with the data model
+     * @param int $index the zero-based index of the data model among the models array returned by [[GridView::dataProvider]].
+     * @return string the data cell value
+     */
+    public function getDataCellValue($model, $key, $index)
+    {
+        if ($this->value !== null) {
+            if (is_string($this->value)) {
+                return Arr::get((array) $model, $this->value);
+            }
+            return call_user_func($this->value, $model, $key, $index, $this);
+        } elseif ($this->attribute !== null) {
+            return is_array($model) ? Arr::get($model, $this->attribute) : $model->getAttribute($this->attribute);
+        }
+        return null;
     }
 
     /**
@@ -97,6 +160,17 @@ class DataColumn extends Column
         $label = $this->getHeaderCellLabel();
         if ($this->encodeLabel) {
             $label = Html::encode($label);
+        }
+
+        if ($this->attribute !== null && $this->enableSorting) {
+            $sorted = request()->get('sort');
+            $sortClass = substr($sorted, 0, 1) === '-' ? 'icon-link desc' : 'icon-link asc';
+            $transform = substr($sorted, 0, 1) === '-' ? 'transform: rotate(-180deg);' : '';
+
+            $url = request()->fullUrlWithQuery(['sort' => substr($sorted, 0, 1) === '-' ? $this->attribute : '-' . $this->attribute]);
+
+            $options = Html::renderTagAttributes(array_merge($this->sortLinkOptions, ['label' => $label, 'class' => $sortClass]));
+            return str("<a href=\"$url\" $options>$label\n<span class=\"bi bi-triangle-fill\" style=\"font-size: 0.5rem; $transform\"></span></a>")->toHtmlString();
         }
 
         return $label;
@@ -151,26 +225,6 @@ class DataColumn extends Column
             $label = $this->label;
         }
         return $label;
-    }
-
-    /**
-     * Returns the data cell value.
-     * @param mixed $model the data model
-     * @param mixed $key the key associated with the data model
-     * @param int $index the zero-based index of the data model among the models array returned by [[GridView::dataProvider]].
-     * @return string the data cell value
-     */
-    public function getDataCellValue($model, $key, $index)
-    {
-        if ($this->value !== null) {
-            if (is_string($this->value)) {
-                return Arr::get((array) $model, $this->value);
-            }
-            return call_user_func($this->value, $model, $key, $index, $this);
-        } elseif ($this->attribute !== null) {
-            return is_array($model) ? Arr::get($model, $this->attribute) : $model->getAttribute($this->attribute);
-        }
-        return null;
     }
 
     /**
@@ -258,6 +312,74 @@ class DataColumn extends Column
             return $this->filter;
         }
 
+        if ($this->filter !== false && $this->filterAttribute !== null) {
+            if (is_array($this->filter)) {
+                $options = array_merge(['prompt' => '', 'strict' => true,], $this->filterInputOptions);
 
+                $name = Arr::get($options, 'name', $this->filterAttribute);
+                $selection = Arr::get($$options, 'value');
+
+                Arr::forget($options, ['name', 'value']);
+
+                if (!array_key_exists('unselect', $options)) {
+                    $options['unselect'] = '';
+                }
+
+                if (!array_key_exists('id', $options) || is_null($options['id'])) {
+                    $options['id'] = "filter_$name";
+                }
+
+                $options['name'] = $name;
+
+                $selectOptions = Html::renderSelectOptions($selection, $this->filter, $options);
+
+                $options = Html::renderTagAttributes($options);
+
+                $dropDown = "<select $options>";
+                $dropDown .= $selectOptions;
+                $dropDown .= "</select>";
+                return str($dropDown)->toHtmlString();
+            } elseif ($this->format === 'boolean') {
+                // Repetimos todo lo anterior pero dentro del contenido del select reemplazamos el contenido por un array de 2 elementos.
+                $options = array_merge(['prompt' => '', 'strict' => true,], $this->filterInputOptions);
+
+                $name = Arr::get($options, 'name', $this->filterAttribute);
+                $selection = Arr::get($options, 'value');
+
+                Arr::forget($options, ['name', 'value']);
+
+                if (!array_key_exists('unselect', $options)) {
+                    $options['unselect'] = '';
+                }
+
+                if (!array_key_exists('id', $options) || is_null($options['id'])) {
+                    $options['id'] = "filter_$name";
+                }
+
+                $options['name'] = $name;
+
+                $selectOptions = Html::renderSelectOptions($selection, [
+                    0 => 'No',
+                    1 => 'Yes'
+                ], $options);
+
+                $options = Html::renderTagAttributes($options);
+
+                $dropDown = "<select $options>";
+                $dropDown .= $selectOptions;
+                $dropDown .= "</select>";
+                return str($dropDown)->toHtmlString();
+            }
+
+            $options = array_merge(['maxlength' => true], $this->filterInputOptions);
+            $name = Arr::get($options, 'name', $this->filterAttribute);
+            $options['name'] = $name;
+            if (!array_key_exists('id', $options) || is_null($options['id'])) {
+                $options['id'] = "filter_$name";
+            }
+            $options = Html::renderTagAttributes($options);
+            return str("<input type=\"search\" $options />")->toHtmlString();
+        }
+        return parent::renderFilterCellContent();
     }
 }

@@ -158,14 +158,20 @@ class GridViewComponent extends Component
     /**
      * The HTML attributes for the filter row element.
      * 
-     * See also {@link neoacevedo\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * See {@link neoacevedo\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
      * @var array
      */
     public array $filterRowOptions;
 
     /**
+     * The URL for retirning the filtering result. When the user makes change to any filter input, the current filtering inputs will be appended as GET parameters to this URL.
+     * @var string
+     */
+    public string $filterUrl;
+
+    /**
      * The HTML attributes for the table footer row.
-     * See also {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * See {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
      * @var array
      */
     public array $footerRowOptions;
@@ -187,15 +193,41 @@ class GridViewComponent extends Component
      * - `{summary}`: the summary section.
      * - `{errors}`: the filter model error summary.
      * - `{items}`: the list items.
-     * - `{sorter}`: the sorter.
      * - `{pager}`: the pager.
      *  
      * @var string
      */
     public $layout;
 
-    /** @var array|Closure */
+    /**
+     * @var array the HTML attributes for the container tag of the grid view.
+     * The "tag" element specifies the tag name of the container element and defaults to "div".
+     * See {@see \neoacevedo\gridview\Support\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     */
+    public $options;
+
+    /**
+     * The HTML attributes for the table body rows. This can be either an array specifying the common HTML attributes for all body rows, or an anonymous function that returns an array of the HTML attributes. 
+     * The anonymous function will be called once for every data model returned by {@see GridViewComponent::$dataProvider}. 
+     * It should have the following signature:
+     * ```php
+     * function($model, $key, $index, $grid)
+     * ```
+     * 
+     * - `$model`: the current data model being rendered
+     * - `$key`: the key value associated with the current data model
+     * - `$index`: the zero-based index of the data model in the model array returned by {@see GridViewComponent::$dataProvider}
+     * - `$grid`: the GridView object
+     * 
+     * @var array|Closure
+     */
     public $rowOptions;
+
+    /**
+     * Whether to show the filters.
+     * @var bool
+     */
+    public $showFilters;
 
     /**
      * Whether to show the footer section of the grid table.
@@ -208,6 +240,12 @@ class GridViewComponent extends Component
      * @var boolean
      */
     public $showHeader;
+
+    /**
+     * Whether to show the grid view if {@see GridViewComponent::$dataProvider} return no data.
+     * @var bool
+     */
+    public bool $showOnEmpty;
 
     /**
      * The HTML content to be displayed as the summary of the grid view.
@@ -247,12 +285,16 @@ class GridViewComponent extends Component
         mixed $formatter = null,
         string $filterPosition = self::FILTER_POS_BODY,
         array $filterRowOptions = ['class' => 'filters',],
+        string $filterUrl = null,
         array $footerRowOptions = [],
         array $headerRowOptions = [],
         string $layout = "{summary}\n{items}\n{pager}",
+        array $options = ['class' => 'grid-view'],
         mixed $rowOptions = null,
+        bool $showFilters = true,
         bool $showFooter = false,
         bool $showHeader = true,
+        bool $showOnEmpty = true,
         string $summary = null,
         array $summaryOptions = ['class' => 'summary'],
         // array $tableOptions = ['class' => 'table table-striped table-bordered']
@@ -277,25 +319,39 @@ class GridViewComponent extends Component
 
         $this->filterRowOptions = $filterRowOptions;
 
+        $this->filterUrl = $filterUrl ? url($filterUrl) : request()->fullUrl();
+
         $this->formatter = $formatter;
 
         $this->footerRowOptions = $footerRowOptions;
 
         $this->headerRowOptions = $headerRowOptions;
 
+        $this->options = $options;
+
         $this->layout = $layout;
 
         $this->rowOptions = $rowOptions;
+
+        $this->showFilters = $showFilters;
 
         $this->showFooter = $showFooter;
 
         $this->showHeader = $showHeader;
 
+        $this->showOnEmpty = $showOnEmpty;
+
         $this->summary = $summary;
 
         $this->summaryOptions = $summaryOptions;
 
-        // $this->tableOptions = $tableOptions;
+        if (!isset($this->options['id'])) {
+            $this->options['id'] = "gridview" . rand(1, 2000);
+        }
+
+        if (!isset($this->filterRowOptions['id'])) {
+            $this->filterRowOptions['id'] = $this->options['id'] . '-filters';
+        }
 
         if ($this->dataProvider === null) {
             throw new Exception('The "dataProvider" property must be set.', 500);
@@ -324,26 +380,20 @@ class GridViewComponent extends Component
      */
     public function render()
     {
-        $summary = $content = $pager = '';
-        if (count($this->dataProvider) > 0) {
-            preg_match_all('/{\\w+}/', $this->layout, $matches);
-            for ($index = 0; $index < count($matches[0]); $index++) {
-                if ($matches[0][$index] === '{summary}') {
-                    $summary = $this->renderSummary();
-                } elseif ($matches[0][$index] === '{pager}') {
-                    $pager = $this->renderPager();
-                } else {
-                    $content = $this->renderSection($matches[0][$index]);
-                }
-            }
+        $section = [];
+        if ($this->showOnEmpty || count($this->dataProvider) > 0) {
+            preg_replace_callback('/{\\w+}/', function ($matches) use (&$section) {
+                $content = $this->renderSection($matches[0]);
+                $section[$matches[0]] = $content === false ? $matches[0] : $content;
+            }, $this->layout);
         } else {
-            $content = $this->renderEmpty();
+            $section['{items}'] = $this->renderEmpty();
         }
 
         return view('gridview::components.table', [
-            'content' => $content,
-            'pager' => $pager,
-            'resumen' => $summary,
+            'section' => $section,
+            'options' => $this->options,
+            'filterUrl' => $this->filterUrl,
         ]);
     }
 
@@ -376,33 +426,40 @@ class GridViewComponent extends Component
         if ($this->emptyText === false) {
             return '';
         }
-        $options = Html::renderTagAttributes($this->emptyTextOptions);
 
-        Arr::forget($this->emptyTextOptions, 'tag');
-        if (!$this->emptyTextOptions['tag']) {
-            $tag = "div";
+        if (isset($this->emptyTextOptions['tag'])) {
+            Arr::forget($this->emptyTextOptions, 'tag');
+            if (!$this->emptyTextOptions['tag']) {
+                $tag = "div";
+            }
+        } else {
+            $tag = 'div';
         }
+
+        $options = Html::renderTagAttributes($this->emptyTextOptions);
 
         return new HtmlString("<$tag $options>{$this->emptyText}</$tag>");
     }
 
     /**
      * Renders the filter.
-     * @return HtmlString
+     * @return HtmlString|string
      */
     public function renderFilters()
     {
-        $cells = [];
-        /** @var mixed $column */
-        foreach ($this->columns as $column) {
-            $cells[] = $column->renderFilterCell();
+        if ($this->showFilters) {
+            $cells = [];
+            /** @var mixed $column */
+            foreach ($this->columns as $column) {
+                $cells[] = $column->renderFilterCell();
+            }
+
+            $options = Html::renderTagAttributes($this->filterRowOptions);
+
+            return str("<tr $options>" . implode('', $cells) . "</tr>")->toHtmlString();
         }
 
-        $options = Html::renderTagAttributes($this->filterRowOptions);
-
-        $content = "<tr $options>" . implode('', $cells) . "</tr>";
-
-        return new HtmlString("<thead>\n" . $content . "\n</thead>");
+        return '';
     }
 
     /**
@@ -456,7 +513,6 @@ class GridViewComponent extends Component
 
         $keys = array_keys($this->dataProvider->items());
 
-
         $rows = [];
 
         foreach ($models as $index => $model) {
@@ -485,6 +541,7 @@ class GridViewComponent extends Component
         }
         $options = Html::renderTagAttributes($this->footerRowOptions);
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
+
         if ($this->filterPosition === self::FILTER_POS_FOOTER) {
             $content .= $this->renderFilters();
         }
@@ -506,6 +563,12 @@ class GridViewComponent extends Component
         $options = Html::renderTagAttributes($this->headerRowOptions);
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
+
+        if ($this->filterPosition === self::FILTER_POS_HEADER) {
+            $content = $this->renderFilters() . $content;
+        } elseif ($this->filterPosition === self::FILTER_POS_BODY) {
+            $content .= $this->renderFilters();
+        }
 
         return new HtmlString("<thead>\n" . $content . "\n</thead>");
     }
@@ -552,9 +615,6 @@ class GridViewComponent extends Component
                 return $this->renderItems();
             case '{pager}':
                 return $this->renderPager();
-
-            // case '{sorter}':
-            //     return $this->renderSorter();
             default:
                 return false;
         }

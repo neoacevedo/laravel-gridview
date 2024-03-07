@@ -18,27 +18,6 @@
  */
 
 use neoacevedo\gridview\GridView;
-use neoacevedo\gridview\GridViewAsset;
-
-if (!function_exists("register_css_asset")) {
-    /**
-     * Registra el archivo CSS desde datatables.net
-     */
-    function register_css_asset()
-    {
-        return GridViewAsset::registerCss();
-    }
-}
-
-if (!function_exists("register_js_asset")) {
-    /**
-     * Registra el archivo JS desde datatables.net
-     */
-    function register_js_asset()
-    {
-        return GridViewAsset::registerJs();
-    }
-}
 
 if (!function_exists("gridview")) {
     /**
@@ -50,16 +29,3 @@ if (!function_exists("gridview")) {
     }
 }
 
-if (!function_exists("init")) {
-    /**
-     * Registra el código JS de inicialización del dataTable.
-     * @param string $id id de la tabla.
-     * Si se tiene más de una tabla y se quiere activar el datatable en todas las tablas, entonces
-     * se pasa como `table.className`.
-     * @return HtmlString
-     */
-    function init($tableId)
-    {
-        return GridViewAsset::init($tableId);
-    }
-}

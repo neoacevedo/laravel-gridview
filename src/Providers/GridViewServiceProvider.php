@@ -36,15 +36,16 @@ class GridViewServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishViews();
+            $this->publishAssets();
         }
 
         if (substr(app()->version(), 0, 1) >= 7) {
             Blade::component('package-gridview', GridViewComponent::class);
         }
 
-        Paginator::useBootstrap();
-
         $this->loadViewsFrom(dirname(__DIR__) . '/resources/views', 'gridview');
+
+        Paginator::useBootstrap();
 
     }
 
@@ -55,11 +56,26 @@ class GridViewServiceProvider extends ServiceProvider
     {
         $this->publishes([
             dirname(__DIR__) . '/resources/views' => base_path('/resources/views/vendor/gridview'),
-        ], 'gridview');
+        ], 'gridview-view');
 
         $this->publishes([
             dirname(__DIR__) . '/resources/views' => base_path('/resources/views/components'),
-        ]);
+        ], 'gridview-component-view');
+    }
+
+    /**
+     * Publishes component/vendor assets.
+     * @return void
+     */
+    protected function publishAssets(): void
+    {
+        $this->publishes([
+            dirname(__DIR__) . '/assets/js' => public_path('vendor/gridview/assets/js')
+        ], 'gridview-assets');
+
+        $this->publishes([
+            dirname(__DIR__) . '/assets/css' => public_path('vendor/gridview/assets/css')
+        ], 'gridview-assets');
     }
 
     /**

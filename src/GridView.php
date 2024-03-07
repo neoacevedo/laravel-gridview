@@ -158,6 +158,12 @@ class GridView
     public $headerRowOptions = [];
 
     /**
+     * The URL for retirning the filtering result. When the user makes change to any filter input, the current filtering inputs will be appended as GET parameters to this URL.
+     * @var string
+     */
+    public string $filterUrl;
+
+    /**
      * Whether the filters should be displayed in the grid view. Valid values include:
      * - @see GridViewComponent::FILTER_POS_HEADER: the filters will be displayed on top of each column's header cell.
      * - @see GridViewComponent::FILTER_POS_BODY: the filters will be displayed right below each column's header cell.
@@ -199,8 +205,35 @@ class GridView
      */
     public $layout = "{summary}\n{items}\n{pager}";
 
-    /** @var array|Closure */
+    /**
+     * @var array the HTML attributes for the container tag of the grid view.
+     * The "tag" element specifies the tag name of the container element and defaults to "div".
+     * @see \yii\helpers\Html::renderTagAttributes() for details on how attributes are being rendered.
+     */
+    public $options = ['class' => 'grid-view'];
+
+    /**
+     * The HTML attributes for the table body rows. This can be either an array specifying the common HTML attributes for all body rows, or an anonymous function that returns an array of the HTML attributes. 
+     * The anonymous function will be called once for every data model returned by {@see GridView::$dataProvider}. 
+     * It should have the following signature:
+     * ```php
+     * function($model, $key, $index, $grid)
+     * ```
+     * 
+     * - `$model`: the current data model being rendered
+     * - `$key`: the key value associated with the current data model
+     * - `$index`: the zero-based index of the data model in the model array returned by {@see GridView::$dataProvider}
+     * - `$grid`: the GridView object
+     * 
+     * @var array|Closure
+     */
     public $rowOptions = [];
+
+    /**
+     * Whether to show the filters;
+     * @var 
+     */
+    public $showFilters = true;
 
     /**
      * Whether to show the footer section of the grid table.
@@ -213,6 +246,12 @@ class GridView
      * @var boolean
      */
     public $showHeader = true;
+
+    /**
+     * Whether to show the grid view if {@see GridViewComponent::$dataProvider} return no data.
+     * @var bool
+     */
+    public bool $showOnEmpty = true;
 
     /**
      * The HTML content to be displayed as the summary of the grid view.
@@ -247,15 +286,21 @@ class GridView
 
         $this->columns = $config['columns'];
 
-        $this->formatter = @$config['formatter'];
-
         $this->filterPosition = $config['filterPosition'] ?? $this->filterPosition;
 
         $this->filterRowOptions = $config['filterRowOptions'] ?? $this->filterRowOptions;
 
+        $this->filterUrl = @$config['filterUrl'] ? url($config['filterUrl']) : request()->fullUrl();
+
+        $this->formatter = @$config['formatter'];
+
         $this->footerRowOptions = $config['footerRowOptions'] ?? $this->footerRowOptions;
 
+        $this->layout = $config['layout'] ?? $this->layout;
+
         $this->rowOptions = $config['rowOptions'] ?? $this->rowOptions;
+
+        $this->showFilters = $config['showFilters'] ?? $this->showFilters;
 
         $this->showHeader = $config['showHeader'] ?? $this->showHeader;
 
@@ -263,37 +308,13 @@ class GridView
 
         $this->tableOptions = $config['tableOptions'] ?? $this->tableOptions;
 
-        $this->initColumns();
-
-        $summary = $tableOptions = $content = $pager = '';
-        if (count($this->dataProvider) > 0) {
-            preg_match_all('/{\\w+}/', $this->layout, $matches);
-
-            for ($index = 0; $index < count($matches[0]); $index++) {
-                if ($matches[0][$index] === '{summary}') {
-                    $summary = $this->renderSummary();
-                } elseif ($matches[0][$index] === '{pager}') {
-                    $pager = $this->renderPager();
-                } else {
-                    $content = $this->renderSection($matches[0][$index]);
-                }
-            }
-            // $content = preg_replace_callback('/{\\w+}/', function ($matches) use ($summary) {
-            //     $content = $this->renderSection($matches[0]);
-            //     return $content === false ? $matches[0] : $content;
-            // }, $this->layout);
-        } else {
-            $content = $this->renderEmpty();
+        if (!isset($this->options['id'])) {
+            $this->options['id'] = "gridview" . rand(1, 2000);
         }
 
-        $tableOptions = Html::renderTagAttributes($this->tableOptions);
+        $this->initColumns();
 
-        return view('gridview::table', [
-            'summary' => $summary,
-            'tableOptions' => $tableOptions,
-            'content' => $content,
-            'pager' => $pager
-        ]);
+        return $this->run();
     }
 
     /**
@@ -327,23 +348,24 @@ class GridView
 
     /**
      * Renders the filter.
-     * @return HtmlString
+     * @return HtmlString|string
      */
     public function renderFilters()
     {
-        $cells = [];
-        /** @var mixed $column */
-        foreach ($this->columns as $column) {
-            $cells[] = $column->renderFilterCell();
+        if ($this->showFilters) {
+            $cells = [];
+            /** @var mixed $column */
+            foreach ($this->columns as $column) {
+                $cells[] = $column->renderFilterCell();
+            }
+
+            $options = Html::renderTagAttributes($this->filterRowOptions);
+
+            return str("<tr $options>" . implode('', $cells) . "</tr>")->toHtmlString();
         }
 
-        $options = Html::renderTagAttributes($this->filterRowOptions);
-
-        $content = "<tr $options>" . implode('', $cells) . "</tr>";
-
-        return new HtmlString("<thead>\n" . $content . "\n</thead>");
+        return '';
     }
-
 
     /**
      * Renders dtje data ,pdeñs fpr tje grod voew-
@@ -418,6 +440,36 @@ class GridView
     }
 
     /**
+     * Renders the table body.
+     * @return HtmlString
+     */
+    public function renderTableBody()
+    {
+        $models = array_values($this->getModels());
+
+        if (is_array($this->dataProvider)) {
+            $keys = array_keys($this->dataProvider);
+        } elseif ($this->dataProvider instanceof Collection) {
+            $keys = $this->dataProvider->keys();
+        } else {
+            $keys = array_keys($this->dataProvider->items());
+        }
+
+        $rows = [];
+
+        foreach ($models as $index => $model) {
+            $key = $keys[$index];
+
+            $rows[] = $this->renderTableRow($model, $key, $index);
+        }
+        if (empty($rows) && $this->emptyText !== false) {
+            $colspan = count($this->columns);
+            return str("<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>")->toHtmlString();
+        }
+        return str("<tbody>\n" . implode("\n", $rows) . "\n</tbody>")->toHtmlString();
+    }
+
+    /**
      * Renders the table footer.
      * @return HtmlString
      */
@@ -452,37 +504,13 @@ class GridView
 
         $content = "<tr $options>" . implode('', $cells) . "</tr>";
 
+        if ($this->filterPosition === self::FILTER_POS_HEADER) {
+            $content = $this->renderFilters() . $content;
+        } elseif ($this->filterPosition === self::FILTER_POS_BODY) {
+            $content .= $this->renderFilters();
+        }
+
         return new HtmlString("<thead>\n" . $content . "\n</thead>");
-    }
-
-    /**
-     * Renders the table body.
-     * @return HtmlString
-     */
-    public function renderTableBody()
-    {
-        $models = array_values($this->getModels());
-
-        if (is_array($this->dataProvider)) {
-            $keys = array_keys($this->dataProvider);
-        } elseif ($this->dataProvider instanceof Collection) {
-            $keys = $this->dataProvider->keys();
-        } else {
-            $keys = array_keys($this->dataProvider->items());
-        }
-
-        $rows = [];
-
-        foreach ($models as $index => $model) {
-            $key = $keys[$index];
-
-            $rows[] = $this->renderTableRow($model, $key, $index);
-        }
-        if (empty($rows) && $this->emptyText !== false) {
-            $colspan = count($this->columns);
-            return str("<tbody>\n<tr><td colspan=\"$colspan\">" . $this->renderEmpty() . "</td></tr>\n</tbody>")->toHtmlString();
-        }
-        return str("<tbody>\n" . implode("\n", $rows) . "\n</tbody>")->toHtmlString();
     }
 
     /**
@@ -571,6 +599,30 @@ class GridView
             return '';
         }
         return new HtmlString("<div $htmlOptions>Showing <b>$begin-$end</b> of <b>$totalCount</b>.</div>");
+    }
+
+    /**
+     * Runs the widget.
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     */
+    public function run()
+    {
+        $section = [];
+        if ($this->showOnEmpty || count($this->dataProvider) > 0) {
+            preg_replace_callback('/{\\w+}/', function ($matches) use (&$section) {
+                $content = $this->renderSection($matches[0]);
+                $section[$matches[0]] = $content === false ? $matches[0] : $content;
+            }, $this->layout);
+        } else {
+            $section['{items}'] = $this->renderEmpty();
+        }
+
+        return view('gridview::table', [
+            'section' => $section,
+            'options' => $this->options,
+            'tableOptions' => $this->tableOptions,
+            'filterUrl' => $this->filterUrl,
+        ]);
     }
 
     #region Protected

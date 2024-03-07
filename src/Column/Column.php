@@ -157,8 +157,8 @@ class Column
      */
     public function renderFooterCell()
     {
-        $options = Html::renderTagAttributes($this->filterOptions);
-        return str("<td $options>" . $this->renderFilterCellContent() . "</td>")->toHtmlString();
+        $options = Html::renderTagAttributes($this->footerOptions);
+        return str("<td $options>" . $this->renderFooterCellContent() . "</td>")->toHtmlString();
     }
 
     #region Protected
@@ -177,7 +177,7 @@ class Column
      * Renders the header cell content.
      * The default implementation simply renders {@see Column::$header}.
      * This method may be overridden to customize the rendering of the header cell.
-     * @return string the rendering result
+     * @return HtmlString|string the rendering result
      */
     protected function renderHeaderCellContent()
     {
@@ -216,6 +216,7 @@ class Column
      */
     protected function renderFooterCellContent()
     {
+
         return $this->footer !== null && trim($this->footer) !== '' ? $this->footer : $this->grid->emptyCell;
     }
 

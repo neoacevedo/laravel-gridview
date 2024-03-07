@@ -11,7 +11,7 @@
     "license": "GPL-3.0+",
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "version": "24.01.25-RC1",
+    "version": "24.03.07-RC2",
     "authors": [
         {
             "name": "Néstor Acevedo",
