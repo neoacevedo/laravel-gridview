@@ -1,10 +1,9 @@
 Laravel GridView
 ============
 
-Laravel GridView es un paquete para generar una tabla con datos. Permite generar de manera rápida una tabla a partir de un array de modelos Eloquent o Collections o también de arrays anidados, usando los atributos como columnas y cada fila es un modelo con sus datos.
+Laravel GridView es un paquete para generar una tabla con datos. Permite generar de manera rápida una tabla a partir de un array de modelos Eloquent o Collections, usando los atributos como columnas y cada fila es un modelo con sus datos.
 
-Instalación
-------------
+## Instalación
 
 La forma preferida de instalar esta extensión es a través de [composer](http://getcomposer.org/download/).
 
@@ -29,28 +28,22 @@ Luego ejecute el siguiente comando _artisan_ para copiar los assets en el direct
 php artisan vendor:publish --provider="neoacevedo\\gridview\\Providers\\GridViewServiceProvider" --tag=gridview-assets
 ```
 
-Sobrescribir la plantilla `Blade`
----
-
-Si desea sobrescribir la vista que genera la tabla, ejecute el siguiente comando para que copie los archivos de vista en 
-_resources/views/vendor/gridview_:
-
-```bash
-php artisan vendor:publish --provider="neoacevedo\\gridview\\Providers\\GridViewServiceProvider" --tag=gridview-view
-```
-
-Si está usando GridView como componente, la vista será copiada en _resources/views/components_:
-
-```bash
-php artisan vendor:publish --provider="neoacevedo\\gridview\\Providers\\GridViewServiceProvider" --tag=gridview-component-view
-```
-
-Uso
------
+## Uso
 
 Una vez que la extensión está instalada, puede crear la tabla de la siguiente forma:
 
-Para Laravel 6+:
+Registre el servico en el archivo de configuración _app.php_ en la sección `providers`:
+
+```php
+...
+/*
+ * Package Service Providers...
+ */
+neoacevedo\gridview\Providers\GridViewServiceProvider::class,
+...
+```
+
+Para Laravel 6.x o uso como clase:
 
 ```php
 {{ gridview()->widget([
@@ -113,7 +106,7 @@ Para Laravel 6+:
 ]) }}
 ```
 
-Para Laravel 7+, se puede de la forma anterior, o como componente:
+Para Laravel >=7.x, se puede de la forma anterior, o como componente:
 
 ```php
 <x-package-gridview id="table" class="dataTable"
@@ -167,7 +160,7 @@ Para Laravel 7+, se puede de la forma anterior, o como componente:
 	]" />
 ```
 
-Para la propiedad `dataProvider` puede pasarse un array o una colección. Para esta última desde el controlador puede pasarla desde la base de datos.
+La propiedad `dataProvider` tiene que ser de tipo `\Illuminate\Contracts\Pagination\LengthAwarePaginator` con el fin de generar el paginador.
 
 En el array de columnas, puede especificar la clase que se encargará de renderizar el contenido de toda la columna a través de la propiedad `class`. Las clases de columna que soporta GridView son:
 
@@ -177,11 +170,10 @@ En el array de columnas, puede especificar la clase que se encargará de renderi
 - `\neoacevedo\gridview\Column\RadioButtonColumn`: Columna que se encarga de renderizar inputs de radio
 - `\neoacevedo\gridview\Column\SerialColumn`: Columna que renderiza el número de cada fila.
 
-Con cualquiera de las dos opciones, se obtendrá una tabla como la siguiente:
+Con cualquiera de las dos opciones, se obtendrá una tabla parecida a la siguiente:
 
 ```html
-<table data-toggle="table" data-pagination="true" id="bootstrap-table" class="table table-bordered table-hover">
-
+<table id="bootstrap-table" class="table table-bordered table-hover">
     <thead>
         <tr>
             <th data-field="0">
@@ -267,4 +259,19 @@ Con cualquiera de las dos opciones, se obtendrá una tabla como la siguiente:
         </tr>
     </tbody>
 </table>
+```
+
+### Sobrescribir la plantilla `Blade`
+
+Si desea sobrescribir la vista que genera la tabla, ejecute el siguiente comando para que copie los archivos de vista en 
+_resources/views/vendor/gridview_:
+
+```bash
+php artisan vendor:publish --provider="neoacevedo\\gridview\\Providers\\GridViewServiceProvider" --tag=gridview-view
+```
+
+Si está usando GridView como componente, la vista será copiada en _resources/views/components_:
+
+```bash
+php artisan vendor:publish --provider="neoacevedo\\gridview\\Providers\\GridViewServiceProvider" --tag=gridview-component-view
 ```

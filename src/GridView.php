@@ -327,6 +327,19 @@ class GridView
     }
 
     /**
+     * Renders the caption element.
+     * @return bool|HtmlString
+     */
+    public function renderCaption()
+    {
+        if (!empty($this->caption)) {
+            $options = Html::renderTagAttributes($this->captionOptions);
+            return str("<captions $options>{$this->caption}</caption")->toHtmlString();
+        }
+        return false;
+    }
+
+    /**
      * Renders the HTML content indicating that the list view has no data.
      * @return string|HtmlString
      */
@@ -373,7 +386,7 @@ class GridView
      */
     public function renderItems(): string
     {
-        // $caption = $this->renderCaption();
+        $caption = $this->renderCaption();
         $columnGroup = $this->renderColumnGroup();
         $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
         $tableBody = $this->renderTableBody();
@@ -382,7 +395,7 @@ class GridView
             $tableFooter = $this->renderTableFooter();
         }
         $content = array_filter([
-            // $caption,
+            $caption,
             $columnGroup,
             $tableHeader,
             $tableBody,
@@ -399,7 +412,7 @@ class GridView
      */
     public function renderPager(): string
     {
-        $pagination = $this->dataProvider->hasPages();
+        $pagination = $this->dataProvider->hasPages() ?? false;
 
         if ($pagination === false) {
             return '';

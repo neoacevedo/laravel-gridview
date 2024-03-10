@@ -164,8 +164,14 @@ class DataColumn extends Column
 
         if ($this->attribute !== null && $this->enableSorting) {
             $sorted = request()->get('sort');
-            $sortClass = substr($sorted, 0, 1) === '-' ? 'icon-link desc' : 'icon-link asc';
-            $transform = substr($sorted, 0, 1) === '-' ? 'transform: rotate(-180deg);' : '';
+
+            if (substr($sorted, 1) === $this->attribute) {
+                $sortClass = substr($sorted, 0, 1) === '-' ? 'icon-link desc' : 'icon-link asc';
+                $transform = substr($sorted, 0, 1) === '-' ? 'transform: rotate(-180deg);' : '';
+            } else {
+                $sortClass = 'icon-link asc';
+                $transform = '';
+            }
 
             $url = request()->fullUrlWithQuery(['sort' => substr($sorted, 0, 1) === '-' ? $this->attribute : '-' . $this->attribute]);
 

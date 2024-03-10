@@ -301,7 +301,7 @@ class GridViewComponent extends Component
     ) {
         $this->dataProvider = $dataProvider;
 
-        $this->caption = $caption;
+        $this->caption = (string) $caption;
 
         $this->captionOptions = $captionOptions;
 
@@ -398,6 +398,19 @@ class GridViewComponent extends Component
     }
 
     /**
+     * Renders the caption element.
+     * @return bool|HtmlString
+     */
+    public function renderCaption()
+    {
+        if (!empty($this->caption)) {
+            $options = Html::renderTagAttributes($this->captionOptions);
+            return str("<caption $options>{$this->caption}</caption>")->toHtmlString();
+        }
+        return false;
+    }
+
+    /**
      * Renders the column group HTML.
      * @return HtmlString|false
      */
@@ -468,7 +481,7 @@ class GridViewComponent extends Component
      */
     public function renderItems(): string
     {
-        // $caption = $this->renderCaption();
+        $caption = $this->renderCaption();
         $columnGroup = $this->renderColumnGroup();
         $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
         $tableBody = $this->renderTableBody();
@@ -477,7 +490,7 @@ class GridViewComponent extends Component
             $tableFooter = $this->renderTableFooter();
         }
         $content = array_filter([
-            // $caption,
+            $caption,
             $columnGroup,
             $tableHeader,
             $tableBody,
