@@ -43,47 +43,73 @@ neoacevedo\gridview\Providers\GridViewServiceProvider::class,
 ...
 ```
 
-Para Laravel 6.x o uso como clase:
+Como ejemplo, en su controlador, en el método index, puede poner lo siguiente:
 
 ```php
-{{ gridview()->widget([
-	'dataProvider' => [
+public function index(Request $request, int $page = 1, int $perPage = 5)
+{
+	$data = [
 		[
 			'nombre' => 'Andres',
 			'fecha' => 1706200888,
-			'email' => 'andres@localhost.com'
+			'email' => 'andres@localhost.com',
 		],
 		[
 			'nombre' => 'Jorge',
 			'fecha' => 1706200890,
-			'email' => 'jorge@localhost.com'
+			'email' => 'jorge@localhost.com',
 		],
 		[
-			'nombre' => 'Nilson',
+			'nombre' => 'Nelson',
 			'fecha' => 1706200990,
-			'email' => 'nilson@localhost.com'
+			'email' => 'nilson@localhost.com',
 		],
 		[
 			'nombre' => 'Juan',
 			'fecha' => 1706201000,
-			'email' => 'juan@localhost.com'
+			'email' => 'juan@localhost.com',
 		],
 		[
 			'nombre' => 'Pedro',
 			'fecha' => 1706201010,
-			'email' => 'pedro@localhost.com'
+			'email' => 'pedro@localhost.com',
 		],
 		[
 			'nombre' => 'Felipe',
 			'fecha' => 1706201020,
-			'email' => 'felipe@localhost.com'
+			'email' => 'felipe@localhost.com',
 		],
 		[
 			'nombre' => 'Fredy',
 			'fecha' => 1706201030,
-			'email' => 'fredy@localhost.com'
-		]
-	],
+			'email' => 'fredy@localhost.com',
+		],
+		[
+			'nombre' => 'Richard',
+			'fecha' => 1706201040,
+			'email' => 'richard@localhost.com',
+		],
+	];
+
+	Collection::macro('paginate', function ($perPage, $total = null, $page = null, $pageName = 'page') {
+		$page = $page ?: LengthAwarePaginator::resolveCurrentPage($pageName);
+
+		return new LengthAwarePaginator($this->forPage($page, $perPage), $total ?: $this->count(), $perPage, $page, [
+			'path' => LengthAwarePaginator::resolveCurrentPath(),
+			'pageName' => $pageName,
+		]);
+	});
+
+	$dataProvider = collect($data)->paginate(5);
+	return response()->view('index', compact('dataProvider'));
+}
+```
+
+Para Laravel 6.x o uso como clase:
+
+```php
+{{ gridview()->widget([
+	'dataProvider' => $dataProvider,
 	'tableOptions' => [
 	' id' => 'datatable',
 	    'class' => 'dataTable'
@@ -110,43 +136,7 @@ Para Laravel >=7.x, se puede de la forma anterior, o como componente:
 
 ```php
 <x-package-gridview id="table" class="dataTable"
-	:dataProvider="[
-		[
-			'nombre' => 'Andres',
-			'fecha' => 1706200888,
-			'email' => 'andres@localhost.com'
-		],
-		[
-			'nombre' => 'Jorge',
-			'fecha' => 1706200890,
-			'email' => 'jorge@localhost.com'
-		],
-		[
-			'nombre' => 'Nilson',
-			'fecha' => 1706200990,
-			'email' => 'nilson@localhost.com'
-		],
-		[
-			'nombre' => 'Juan',
-			'fecha' => 1706201000,
-			'email' => 'juan@localhost.com'
-		],
-		[
-			'nombre' => 'Pedro',
-			'fecha' => 1706201010,
-			'email' => 'pedro@localhost.com'
-		],
-		[
-			'nombre' => 'Felipe',
-			'fecha' => 1706201020,
-			'email' => 'felipe@localhost.com'
-		],
-		[
-			'nombre' => 'Fredy',
-			'fecha' => 1706201030,
-			'email' => 'fredy@localhost.com'
-		],
-	]" :columns="[  
+	:dataProvider="$dataProvider" :columns="[  
 			[
 				'attribute' => 'nombre',
 				'headerOptions' => ['data-sortable' => 'true']
